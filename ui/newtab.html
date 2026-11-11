@@ -1,43 +1,71 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="dark"><title>New tab · VEYRA</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#090f1b">
+  <title>New tab · VEYRA</title>
   <link rel="stylesheet" href="newtab.css">
 </head>
 <body>
-  <div class="glow glow-one"></div><div class="glow glow-two"></div><div class="grain"></div>
-  <main class="home">
-    <header class="brand-row">
-      <div class="brand">
-        <svg viewBox="0 0 48 48" aria-hidden="true">
-          <defs><linearGradient id="v" x1="0" y1="0" x2="1" y2="1">
-            <stop stop-color="#77efd0"/><stop offset=".56" stop-color="#83bdff"/><stop offset="1" stop-color="#b19aff"/>
-          </linearGradient></defs>
-          <path d="M7 7 24 41 41 7" fill="none" stroke="url(#v)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="24" cy="24" r="3.2" fill="#eafff9"/>
-        </svg><span>VEYRA</span>
-      </div><span class="edition">YOUR SPACE ON THE WEB</span>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+  <main class="page">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="VEYRA home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 40 40"><path d="M5 6 20 34 35 6" /><path d="M20 17v7" /></svg>
+        </span>
+        <span class="brand-name">VEYRA</span>
+      </a>
+      <div class="top-meta">
+        <span class="status-dot"></span>
+        <span>EARLY ACCESS</span>
+        <span class="meta-divider"></span>
+        <span id="clock">--:--</span>
+      </div>
     </header>
 
-    <section class="hero">
-      <div class="eyebrow"><i></i> A little room to explore</div>
-      <h1>The web, <span>without the noise.</span></h1>
-      <p class="intro">A fresh place to begin. Where would you like to go?</p>
-      <form class="search" action="https://duckduckgo.com/" method="get">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.7"/><path d="m16 16 4.2 4.2"/></svg>
-        <input name="q" type="search" placeholder="Search the web or enter a question" autocomplete="off" spellcheck="false" autofocus>
-        <button type="submit">Search <span>→</span></button>
+    <section class="welcome">
+      <div class="eyebrow"><span class="eyebrow-line"></span> YOUR WINDOW TO THE WEB</div>
+      <h1 id="greeting">Good evening<span>Where to next?</span></h1>
+      <p class="subheading">A little space to think. A whole web to explore.</p>
+
+      <form class="search" action="https://duckduckgo.com/" method="get" role="search">
+        <span class="search-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.7"></circle><path d="m16 16 4.2 4.2"></path></svg>
+        </span>
+        <input name="q" type="search" placeholder="Search the web or enter an address" autocomplete="off" spellcheck="false" autofocus aria-label="Search the web">
+        <kbd>ENTER <span>↵</span></kbd>
+        <button type="submit" aria-label="Search">
+          <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+        </button>
       </form>
-      <div class="quick-title"><span>QUICK ACCESS</span><small>A few good places to start</small></div>
-      <nav class="quick-links" aria-label="Quick access">
-        <a href="https://github.com/"><b class="github">GH</b><span><strong>GitHub</strong><small>Build something</small></span><em>↗</em></a>
-        <a href="https://wikipedia.org/"><b class="wiki">W</b><span><strong>Wikipedia</strong><small>Follow curiosity</small></span><em>↗</em></a>
-        <a href="https://youtube.com/"><b class="video">▶</b><span><strong>YouTube</strong><small>Watch and learn</small></span><em>↗</em></a>
-      </nav>
+
+      <section class="shortcuts-section" aria-label="Shortcuts">
+        <div class="section-heading">
+          <div>
+            <div class="section-label">YOUR SHORTCUTS</div>
+            <p>Good places to start.</p>
+          </div>
+          <button id="add-shortcut" class="add-shortcut" type="button"><span>＋</span> Add shortcut</button>
+        </div>
+        <div class="shortcuts" id="shortcuts">
+          <a class="shortcut" href="https://duckduckgo.com/"><span class="shortcut-icon icon-search">D</span><span class="shortcut-copy"><strong>DuckDuckGo</strong><small>Search privately</small></span><span class="shortcut-arrow">↗</span></a>
+          <a class="shortcut" href="https://github.com/"><span class="shortcut-icon icon-github">GH</span><span class="shortcut-copy"><strong>GitHub</strong><small>Build something</small></span><span class="shortcut-arrow">↗</span></a>
+          <a class="shortcut" href="https://youtube.com/"><span class="shortcut-icon icon-video">▶</span><span class="shortcut-copy"><strong>YouTube</strong><small>Watch and discover</small></span><span class="shortcut-arrow">↗</span></a>
+          <a class="shortcut" href="https://wikipedia.org/"><span class="shortcut-icon icon-wiki">W</span><span class="shortcut-copy"><strong>Wikipedia</strong><small>Follow curiosity</small></span><span class="shortcut-arrow">↗</span></a>
+          <a class="shortcut" href="https://reddit.com/"><span class="shortcut-icon icon-reddit">r/</span><span class="shortcut-copy"><strong>Reddit</strong><small>Find your people</small></span><span class="shortcut-arrow">↗</span></a>
+          <a class="shortcut" href="https://stackoverflow.com/"><span class="shortcut-icon icon-stack">S</span><span class="shortcut-copy"><strong>Stack Overflow</strong><small>Learn and solve</small></span><span class="shortcut-arrow">↗</span></a>
+        </div>
+      </section>
     </section>
 
-    <footer><div><strong id="clock">--:--</strong><span id="date">Loading date…</span></div><small>VEYRA <i>·</i> BROWSE BEYOND</small></footer>
+    <footer class="footer">
+      <span id="date">Loading date…</span>
+      <span class="footer-brand">VEYRA <i>·</i> BROWSE BEYOND</span>
+    </footer>
   </main>
   <script src="newtab.js"></script>
 </body>

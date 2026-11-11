@@ -4,6 +4,11 @@
 #include <vector>
 #include "include/cef_browser.h"
 
+struct SavedPage {
+  std::wstring title;
+  std::wstring url;
+};
+
 struct BrowserTab {
   int id = -1;
   CefRefPtr<CefBrowser> browser;
@@ -30,6 +35,13 @@ class AppState final {
   void Reload();
   void Stop();
   void GoHome();
+  bool AddBookmark();
+  bool IsBookmarked(const std::wstring& url) const;
+  void OpenBookmark(std::size_t index);
+  void OpenHistory(std::size_t index);
+  void ClearHistory();
+  const std::vector<SavedPage>& Bookmarks() const { return bookmarks_; }
+  const std::vector<SavedPage>& History() const { return history_; }
   void FocusAddress();
   void FocusBrowser();
   void BeginShutdown();
@@ -49,10 +61,15 @@ class AppState final {
   BrowserTab* FindTab(int id);
   void RefreshChrome();
   void LayoutTabs();
+  void LoadBrowserData();
+  void SaveBrowserData() const;
+  void RecordHistory(int tabId, const std::wstring& url);
   static std::wstring NormalizeAddress(const std::wstring& address);
   HWND window_ = nullptr;
   HWND address_edit_ = nullptr;
   std::vector<BrowserTab> tabs_;
+  std::vector<SavedPage> bookmarks_;
+  std::vector<SavedPage> history_;
   int active_id_ = -1;
   bool closing_ = false;
 };

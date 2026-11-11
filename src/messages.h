@@ -17,3 +17,5 @@ constexpr int ID_MENU_RELOAD = 2002;
 constexpr int ID_MENU_CLOSE_TAB = 2003;
 constexpr int ID_MENU_ABOUT = 2004;
 constexpr int ID_MENU_EXIT = 2005;
+
+constexpr UINT WM_VEYRA_BOOKMARK = WM_APP + 19;

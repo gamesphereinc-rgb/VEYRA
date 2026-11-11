@@ -32,6 +32,15 @@ else()
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CEF_ROOT}/cmake")
+
+# The CEF Windows wrapper defaults to /MT, but Visual Studio application
+# targets use /MD by default. Keep the wrapper on the same CRT to avoid
+# LNK2038 RuntimeLibrary mismatches and duplicate CRT symbols at link time.
+if(MSVC)
+  set(CEF_RUNTIME_LIBRARY_FLAG "/MD" CACHE STRING
+      "MSVC runtime library flag used by CEF targets" FORCE)
+endif()
+
 find_package(CEF REQUIRED)
 ADD_LOGICAL_TARGET("libcef_lib" "${CEF_LIB_DEBUG}" "${CEF_LIB_RELEASE}")
 add_subdirectory("${CEF_LIBCEF_DLL_WRAPPER_PATH}" libcef_dll_wrapper)
@@ -61,6 +70,10 @@ set_target_properties(VEYRA PROPERTIES
 
 # The CEF bootstrap launcher provides the Windows sandbox handle to VEYRA.dll.
 if(COMMAND SET_LPAC_ACLS)
+  # CEF's helper expects this variable to be populated by its sample target
+  # setup macros. VEYRA defines its own output directory, so provide the
+  # matching per-configuration directory explicitly.
+  set(CEF_TARGET_OUT_DIR "$<TARGET_FILE_DIR:VEYRA>")
   SET_LPAC_ACLS(VEYRA)
 endif()
 if(COMMAND COPY_FILES)
