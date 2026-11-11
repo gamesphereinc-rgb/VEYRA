@@ -11,6 +11,16 @@ on:
       - 'resources/**'
       - 'scripts/**'
       - '.github/workflows/windows-build.yml'
+  # Validate browser changes before they are merged into main.
+  pull_request:
+    branches: [main]
+    paths:
+      - CMakeLists.txt
+      - 'src/**'
+      - 'ui/**'
+      - 'resources/**'
+      - 'scripts/**'
+      - '.github/workflows/windows-build.yml'
   # Use workflow_dispatch for a deliberate manual test build from a selected ref.
   workflow_dispatch:
 
