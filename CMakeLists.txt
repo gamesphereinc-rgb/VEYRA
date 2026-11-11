@@ -17,6 +17,11 @@ if(NOT EXISTS "${CEF_ROOT}/cmake/FindCEF.cmake")
   message(FATAL_ERROR "CEF not found. Run powershell -ExecutionPolicy Bypass -File scripts/setup.ps1")
 endif()
 
+# CEF's generated CMake macros pass library paths through set_target_properties.
+# Normalize Windows drive paths first so backslashes are not parsed as escapes
+# by newer CMake policies (for example, the "\a" in "D:\a\...").
+file(TO_CMAKE_PATH "${CEF_ROOT}" CEF_ROOT)
+
 # The minimal CEF package contains Release binaries only. Keep Debug available
 # when a full CEF distribution is explicitly supplied by a developer.
 if(EXISTS "${CEF_ROOT}/Debug/libcef.lib")
