@@ -82,6 +82,11 @@
   }));
   let availableUpdate = null;
   let releasePage = null;
+  window.VEYRAUpdateFailed = function () {
+    updateButton.disabled = false;
+    updateButton.textContent = availableUpdate ? "Retry download & install" : "Check for updates";
+    updateStatus.textContent = "VEYRA couldn't complete the update. You can safely try again.";
+  };
   updateButton.addEventListener("click",async()=>{
     if(releasePage){
       window.open(releasePage,"_blank","noopener");
@@ -133,13 +138,23 @@
     }finally{updateButton.disabled=false;}
   });
 
+  const shortcutIcons = {
+    search: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.7"/><path d="m16 16 4.2 4.2"/></svg>',
+    code: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.5 8-4 4 4 4m7-8 4 4-4 4m-2-10-3 12"/></svg>',
+    play: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m10 8 6 4-6 4z"/></svg>',
+    book: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21zM4 5.5v15.2M8 7h8m-8 4h8"/></svg>',
+    community: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3.5 20v-1.5A4.5 4.5 0 0 1 8 14h2a4.5 4.5 0 0 1 4.5 4.5V20M16 5.5a3 3 0 0 1 0 5.8m1.5 2.2a4 4 0 0 1 3 3.9V20"/></svg>',
+    layers: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5zm-9 9 9 5 9-5M3 16l9 5 9-5"/></svg>',
+    globe: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>'
+  };
+
   const defaults = [
-    { name: "DuckDuckGo", url: "https://duckduckgo.com/", detail: "Search privately", icon: "D", style: "icon-search" },
-    { name: "GitHub", url: "https://github.com/", detail: "Build something", icon: "GH", style: "icon-github" },
-    { name: "YouTube", url: "https://youtube.com/", detail: "Watch and discover", icon: "▶", style: "icon-video" },
-    { name: "Wikipedia", url: "https://wikipedia.org/", detail: "Follow curiosity", icon: "W", style: "icon-wiki" },
-    { name: "Reddit", url: "https://reddit.com/", detail: "Find your people", icon: "r/", style: "icon-reddit" },
-    { name: "Stack Overflow", url: "https://stackoverflow.com/", detail: "Learn and solve", icon: "S", style: "icon-stack" }
+    { name: "DuckDuckGo", url: "https://duckduckgo.com/", detail: "Search privately", iconName: "search", style: "icon-search" },
+    { name: "GitHub", url: "https://github.com/", detail: "Build something", iconName: "code", style: "icon-github" },
+    { name: "YouTube", url: "https://youtube.com/", detail: "Watch and discover", iconName: "play", style: "icon-video" },
+    { name: "Wikipedia", url: "https://wikipedia.org/", detail: "Follow curiosity", iconName: "book", style: "icon-wiki" },
+    { name: "Reddit", url: "https://reddit.com/", detail: "Find your people", iconName: "community", style: "icon-reddit" },
+    { name: "Stack Overflow", url: "https://stackoverflow.com/", detail: "Learn and solve", iconName: "layers", style: "icon-stack" }
   ];
 
   function updateTime() {
@@ -182,7 +197,8 @@
 
     const icon = document.createElement("span");
     icon.className = "shortcut-icon " + (item.style || "icon-search");
-    icon.textContent = item.icon || item.name.slice(0, 2).toUpperCase();
+    icon.setAttribute("aria-hidden", "true");
+    icon.innerHTML = shortcutIcons[item.iconName] || shortcutIcons.globe;
 
     const copy = document.createElement("span");
     copy.className = "shortcut-copy";
@@ -249,7 +265,7 @@
         name: name.trim().slice(0, 28),
         url: parsed.href,
         detail: parsed.hostname,
-        icon: name.trim().slice(0, 2).toUpperCase(),
+        iconName: "globe",
         style: "icon-search"
       });
       saveCustomShortcuts(current);
