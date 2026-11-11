@@ -34,23 +34,36 @@ int HexValue(wchar_t c) {
   return -1;
 }
 std::wstring QueryParameter(const std::wstring& url,const std::wstring& key) {
-  const auto query=url.find(L'?');
-  if(query==std::wstring::npos)return {};
-  const auto prefix=key+L"=";
-  auto start=url.find(prefix,query+1);
-  if(start==std::wstring::npos)return {};
-  start+=prefix.size();
-  auto end=url.find(L'&',start);
-  auto encoded=url.substr(start,end==std::wstring::npos?std::wstring::npos:end-start);
-  std::wstring decoded;
-  for(std::size_t i=0;i<encoded.size();++i){
-    if(encoded[i]==L'%'&&i+2<encoded.size()){
-      const int a=HexValue(encoded[i+1]),b=HexValue(encoded[i+2]);
-      if(a>=0&&b>=0){decoded.push_back(static_cast<wchar_t>((a<<4)|b));i+=2;continue;}
+  const auto query = url.find(L'?');
+  if (query == std::wstring::npos) return {};
+
+  std::size_t cursor = query + 1;
+  while (cursor < url.size()) {
+    const auto end = url.find_first_of(L"&#", cursor);
+    const auto tokenEnd = end == std::wstring::npos ? url.size() : end;
+    const auto equals = url.find(L'=', cursor);
+    if (equals != std::wstring::npos && equals < tokenEnd &&
+        url.compare(cursor, equals - cursor, key) == 0) {
+      const auto encoded = url.substr(equals + 1, tokenEnd - equals - 1);
+      std::wstring decoded;
+      for (std::size_t i = 0; i < encoded.size(); ++i) {
+        if (encoded[i] == L'%' && i + 2 < encoded.size()) {
+          const int high = HexValue(encoded[i + 1]);
+          const int low = HexValue(encoded[i + 2]);
+          if (high >= 0 && low >= 0) {
+            decoded.push_back(static_cast<wchar_t>((high << 4) | low));
+            i += 2;
+            continue;
+          }
+        }
+        decoded.push_back(encoded[i] == L'+' ? L' ' : encoded[i]);
+      }
+      return decoded;
     }
-    decoded.push_back(encoded[i]);
+    if (end == std::wstring::npos) break;
+    cursor = end + 1;
   }
-  return decoded;
+  return {};
 }
 }
 
@@ -59,8 +72,13 @@ bool BrowserClient::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
   if(!request||!browser||!frame||!frame->IsMain())return false;
   const auto url=request->GetURL().ToWString();
   if(url.rfind(L"veyra://install-update",0)!=0)return false;
-  const auto current=browser->GetMainFrame()->GetURL().ToWString();
-  if(current.find(L"newtab.html")==std::wstring::npos){
+  const auto current = browser->GetMainFrame()->GetURL().ToWString();
+  const auto home = AppState::Get().HomeUrl();
+  const bool trustedHome = current == home ||
+      (current.size() > home.size() &&
+       current.compare(0, home.size(), home) == 0 &&
+       current[home.size()] == L'#');
+  if (!trustedHome) {
     MessageBeep(MB_ICONWARNING);
     return true;
   }
