@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(VEYRA VERSION 0.1.0 LANGUAGES CXX RC)
+project(VEYRA VERSION 0.2.0 LANGUAGES CXX RC)
 
 if(NOT WIN32)
   message(FATAL_ERROR "The first VEYRA milestone targets Windows 10/11 x64.")
@@ -50,6 +50,8 @@ add_library(VEYRA SHARED
   src/app_state.cpp
   src/browser_client.cpp
   src/window.cpp
+  src/svg_icons.cpp
+  src/update_manager.cpp
   resources/veyra.rc
 )
 target_include_directories(VEYRA PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" "${CEF_ROOT}")
@@ -59,7 +61,7 @@ if(MSVC)
 endif()
 target_link_libraries(VEYRA PRIVATE
   libcef_lib libcef_dll_wrapper ${CEF_STANDARD_LIBS}
-  gdiplus dwmapi comctl32 shlwapi shell32
+  gdiplus dwmapi comctl32 shlwapi shell32 winhttp bcrypt
 )
 set_target_properties(VEYRA PROPERTIES
   PREFIX "" OUTPUT_NAME "VEYRA"
@@ -83,6 +85,8 @@ endif()
 add_custom_command(TARGET VEYRA POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CEF_BINARY_DIR}/bootstrap.exe" "$<TARGET_FILE_DIR:VEYRA>/VEYRA.exe"
   COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/ui" "$<TARGET_FILE_DIR:VEYRA>/ui"
+  COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:VEYRA>/scripts"
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/scripts/apply-update.ps1" "$<TARGET_FILE_DIR:VEYRA>/scripts/apply-update.ps1"
   VERBATIM
 )
 if(CMAKE_GENERATOR MATCHES "Visual Studio")

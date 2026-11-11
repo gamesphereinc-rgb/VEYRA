@@ -16,8 +16,11 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include <memory>
 #include "src/app_state.h"
 #include "src/messages.h"
+#include "src/svg_icons.h"
+#include "src/update_manager.h"
 
 using namespace Gdiplus;
 namespace {
@@ -63,11 +66,11 @@ void VMark(Graphics& g,float x,float y) {
   LinearGradientBrush brush(PointF(x,y),PointF(x+28,y+28),Color(255,114,236,203),Color(255,124,157,255));
   Pen mark(&brush,4); mark.SetStartCap(LineCapRound); mark.SetEndCap(LineCapRound); g.DrawLines(&mark,pts,3);
 }
-void Button(Graphics& g,int x,int y,const wchar_t* glyph,bool enabled) {
+void Button(Graphics& g,int x,int y,const wchar_t* icon,bool enabled) {
   Round(g,RectF((REAL)x,(REAL)y,36.0f,36.0f),11.0f,
         enabled?Color(255,24,38,55):Color(100,20,31,45));
-  Label(g,glyph,(float)x,(float)y-1.0f,36.0f,36.0f,19.0f,
-        enabled?Color(255,220,234,246):Color(255,91,111,132));
+  SvgIcons::Draw(g,icon,RectF((REAL)x+9.0f,(REAL)y+9.0f,18.0f,18.0f),
+                 enabled?255:105);
 }
 void WindowControl(Graphics& g, int x, int control, bool maximized) {
   const bool hovered = g_hoveredWindowControl == control;
@@ -77,27 +80,40 @@ void WindowControl(Graphics& g, int x, int control, bool maximized) {
     g.FillRectangle(&fill, x, 0, 46, 44);
   }
 
-  Pen icon(Color(255, hovered ? 245 : 189, hovered ? 249 : 208,
-                 hovered ? 252 : 224), 1.35f);
-  icon.SetStartCap(LineCapRound);
-  icon.SetEndCap(LineCapRound);
+  const wchar_t* icon = control == 0 ? L"window-minimize" :
+      (control == 1 ? (maximized ? L"window-restore" : L"window-maximize") :
+                      L"window-close");
+  SvgIcons::Draw(g,icon,RectF((REAL)x+14.0f,11.0f,18.0f,18.0f),
+                 hovered?255:220);
 
   if (control == 0) {
-    g.DrawLine(&icon, x + 17, 22, x + 29, 22);
     HitAdd(x, 0, 46, 44, Action::MinimizeWindow);
   } else if (control == 1) {
-    if (maximized) {
-      g.DrawRectangle(&icon, x + 17, 12, 11, 10);
-      g.DrawLine(&icon, x + 15, 15, x + 15, 25);
-      g.DrawLine(&icon, x + 15, 25, x + 25, 25);
-    } else {
-      g.DrawRectangle(&icon, x + 17, 13, 12, 11);
-    }
     HitAdd(x, 0, 46, 44, Action::ToggleMaximizeWindow);
   } else {
-    g.DrawLine(&icon, x + 17, 14, x + 29, 26);
-    g.DrawLine(&icon, x + 29, 14, x + 17, 26);
     HitAdd(x, 0, 46, 44, Action::CloseWindow);
+  }
+}
+
+void NotifyUpdateFailed(int browserId) {
+  AppState::Get().NotifyTabUpdateFailed(browserId);
+}
+
+void OpenDownloadsFolder(HWND owner) {
+  PWSTR downloads = nullptr;
+  const HRESULT result = SHGetKnownFolderPath(FOLDERID_Downloads, 0, nullptr, &downloads);
+  if (FAILED(result) || !downloads) {
+    MessageBoxW(owner, L"Could not locate the Windows Downloads folder.",
+                L"VEYRA", MB_OK | MB_ICONWARNING);
+    return;
+  }
+
+  const auto opened = reinterpret_cast<INT_PTR>(
+      ShellExecuteW(owner, L"open", downloads, nullptr, nullptr, SW_SHOWNORMAL));
+  CoTaskMemFree(downloads);
+  if (opened <= 32) {
+    MessageBoxW(owner, L"Could not open the Downloads folder.",
+                L"VEYRA", MB_OK | MB_ICONWARNING);
   }
 }
 
@@ -131,21 +147,21 @@ void Paint(HWND hwnd,HDC hdc) {
     else {SolidBrush dot(selected?Color(255,112,231,207):Color(255,91,119,146));g.FillEllipse(&dot,(REAL)x+16.0f,21.0f,6.0f,6.0f);}
     Label(g,t.title.empty()?L"New tab":t.title,(float)x+34,8,(float)tw-70,32,10,
           selected?Color(255,232,241,250):Color(255,154,174,193));
-    Label(g,L"×",(float)x+tw-30,8,24,31,16,Color(255,143,161,180));
+    SvgIcons::Draw(g,L"close",RectF((REAL)x+(REAL)tw-27.0f,15.0f,14.0f,14.0f),190);
     HitAdd(x,6,tw-5,36,Action::ActivateTab,t.id);
     HitAdd(x+tw-30,7,25,34,Action::CloseTab,t.id);
     x+=tw;
   }
   const int plus=std::min(w-46,x+4);
   Round(g,RectF((REAL)plus,10,28,28),9,Color(70,86,130,153));
-  Label(g,L"+",(float)plus,8,28,30,20,Color(255,204,224,237));
+  SvgIcons::Draw(g,L"plus",RectF((REAL)plus+6.0f,16.0f,16.0f,16.0f),235);
   HitAdd(plus,8,30,32,Action::NewTab);
 
   const auto* tab=AppState::Get().ActiveTab();
-  Button(g,17,58,L"‹",tab&&tab->can_go_back);
-  Button(g,58,58,L"›",tab&&tab->can_go_forward);
-  Button(g,99,58,tab&&tab->loading?L"×":L"↻",true);
-  Button(g,140,58,L"⌂",true);
+  Button(g,17,58,L"arrow-left",tab&&tab->can_go_back);
+  Button(g,58,58,L"arrow-right",tab&&tab->can_go_forward);
+  Button(g,99,58,tab&&tab->loading?L"stop":L"refresh",true);
+  Button(g,140,58,L"home",true);
   HitAdd(17,57,34,36,Action::Back); HitAdd(58,57,34,36,Action::Forward);
   HitAdd(99,57,34,36,Action::Reload); HitAdd(140,57,34,36,Action::Home);
 
@@ -154,17 +170,13 @@ void Paint(HWND hwnd,HDC hdc) {
   Pen border(Color(255,42,61,81),1);
   GraphicsPath p; p.AddArc((REAL)left,56.0f,26.0f,26.0f,180.0f,90.0f);p.AddArc((REAL)right-26.0f,56.0f,26.0f,26.0f,270.0f,90.0f);
   p.AddArc((REAL)right-26.0f,70.0f,26.0f,26.0f,0.0f,90.0f);p.AddArc((REAL)left,70.0f,26.0f,26.0f,90.0f,90.0f);p.CloseFigure();g.DrawPath(&border,&p);
-  if(tab&&tab->url.rfind(L"https://",0)==0){
-    Pen lock(Color(255,111,224,204),1.5f);g.DrawArc(&lock,198,65,10,11,180,180);
-    Round(g,RectF(197,72,13,10),2,Color(255,111,224,204));
-  }else{
-    Pen globe(Color(255,126,154,178),1.3f);g.DrawEllipse(&globe,197,65,14,14);g.DrawLine(&globe,197,72,211,72);
-  }
+  SvgIcons::Draw(g,tab&&tab->url.rfind(L"https://",0)==0?L"lock":L"globe",
+                 RectF(196.0f,64.0f,16.0f,16.0f),220);
   const bool saved = tab && AppState::Get().IsBookmarked(tab->url);
-  Button(g,w-104,58,saved?L"★":L"☆",true);
+  Button(g,w-104,58,saved?L"bookmark-filled":L"bookmark",true);
   HitAdd(w-104,57,38,38,Action::Bookmark);
   Round(g,RectF((REAL)w-58.0f,58.0f,38.0f,36.0f),11.0f,Color(255,23,36,52));
-  Label(g,L"···",(float)w-58,54,38,38,16,Color(255,194,211,227));
+  SvgIcons::Draw(g,L"more",RectF((REAL)w-49.0f,67.0f,20.0f,20.0f),225);
   HitAdd(w-58,57,38,38,Action::Menu);
 
   // VEYRA's own frameless window controls. No stock Windows caption buttons.
@@ -184,62 +196,176 @@ LRESULT CALLBACK AddressProc(HWND edit,UINT msg,WPARAM wp,LPARAM lp,UINT_PTR id,
   if(msg==WM_NCDESTROY) RemoveWindowSubclass(edit,AddressProc,id);
   return DefSubclassProc(edit,msg,wp,lp);
 }
-void AppendSavedPages(HMENU menu, const std::vector<SavedPage>& pages,
-                      UINT firstId, std::size_t limit) {
-  if (pages.empty()) {
-    AppendMenuW(menu, MF_STRING | MF_GRAYED, 0, L"Nothing here yet");
-    return;
+struct MenuItem {
+  std::wstring label;
+  std::wstring icon;
+  UINT command = 0;
+  bool heading = false;
+};
+constexpr wchar_t kMenuClassName[] = L"VEYRA.CustomMenuPopup";
+constexpr UINT ID_MENU_SETTINGS = 2009;
+std::vector<MenuItem> g_menuItems;
+HWND g_menuWindow = nullptr;
+HWND g_menuOwner = nullptr;
+int g_menuHover = -1;
+
+void BuildMenuItems() {
+  g_menuItems.clear();
+  g_menuItems.push_back({L"BROWSER",L"",0,true});
+  g_menuItems.push_back({L"New tab                              Ctrl+T",L"plus",ID_MENU_NEW_TAB,false});
+  g_menuItems.push_back({L"Bookmark this page              Ctrl+D",L"bookmark",ID_MENU_BOOKMARK_THIS,false});
+  g_menuItems.push_back({L"Downloads",L"download",ID_MENU_OPEN_DOWNLOADS,false});
+  g_menuItems.push_back({L"Settings",L"settings",ID_MENU_SETTINGS,false});
+  g_menuItems.push_back({L"ABOUT",L"",0,true});
+  g_menuItems.push_back({L"About VEYRA",L"info",ID_MENU_ABOUT,false});
+  g_menuItems.push_back({L"Exit VEYRA",L"window-close",ID_MENU_EXIT,false});
+
+  const auto& bookmarks=AppState::Get().Bookmarks();
+  if(!bookmarks.empty()){
+    g_menuItems.push_back({L"BOOKMARKS",L"",0,true});
+    const auto count=std::min<std::size_t>(bookmarks.size(),4);
+    for(std::size_t i=0;i<count;++i){
+      auto label=bookmarks[i].title.empty()?bookmarks[i].url:bookmarks[i].title;
+      if(label.size()>34)label=label.substr(0,31)+L"...";
+      g_menuItems.push_back({label,L"bookmark",ID_MENU_BOOKMARK_BASE+static_cast<UINT>(i),false});
+    }
   }
-  const auto count = std::min(pages.size(), limit);
-  for (std::size_t i = 0; i < count; ++i) {
-    std::wstring label = pages[i].title.empty() ? pages[i].url : pages[i].title;
-    if (label.size() > 72) label.resize(69), label += L"...";
-    AppendMenuW(menu, MF_STRING, firstId + static_cast<UINT>(i), label.c_str());
+  const auto& history=AppState::Get().History();
+  if(!history.empty()){
+    g_menuItems.push_back({L"RECENT HISTORY",L"",0,true});
+    const auto count=std::min<std::size_t>(history.size(),4);
+    for(std::size_t i=0;i<count;++i){
+      auto label=history[i].title.empty()?history[i].url:history[i].title;
+      if(label.size()>34)label=label.substr(0,31)+L"...";
+      g_menuItems.push_back({label,L"history",ID_MENU_HISTORY_BASE+static_cast<UINT>(i),false});
+    }
+    g_menuItems.push_back({L"Clear browsing history",L"trash",ID_MENU_CLEAR_HISTORY,false});
   }
 }
 
-void OpenDownloadsFolder(HWND hwnd) {
-  PWSTR known = nullptr;
-  if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Downloads, 0, nullptr, &known))) {
-    ShellExecuteW(hwnd, L"open", known, nullptr, nullptr, SW_SHOWNORMAL);
-    CoTaskMemFree(known);
-  } else {
-    ShellExecuteW(hwnd, L"open", L"shell:Downloads", nullptr, nullptr, SW_SHOWNORMAL);
+int MenuItemTop(int target) {
+  int y=48;
+  for(int i=0;i<target&&i<static_cast<int>(g_menuItems.size());++i)
+    y+=g_menuItems[static_cast<std::size_t>(i)].heading?25:37;
+  return y;
+}
+int MenuItemAt(int y) {
+  for(int i=0;i<static_cast<int>(g_menuItems.size());++i){
+    const int top=MenuItemTop(i);
+    const int height=g_menuItems[static_cast<std::size_t>(i)].heading?25:37;
+    if(y>=top&&y<top+height)return i;
   }
+  return -1;
+}
+
+void PaintMenu(HWND hwnd,HDC dc) {
+  RECT client{};GetClientRect(hwnd,&client);
+  const int width=client.right,height=client.bottom;
+  Graphics g(dc);g.SetSmoothingMode(SmoothingModeAntiAlias);
+  Round(g,RectF(0.0f,0.0f,(REAL)width,(REAL)height),15.0f,Color(255,13,23,37));
+  Pen outline(Color(255,48,69,88),1.0f);
+  GraphicsPath border;
+  border.AddArc(0.5f,0.5f,29.0f,29.0f,180.0f,90.0f);
+  border.AddArc((REAL)width-30.0f,0.5f,29.0f,29.0f,270.0f,90.0f);
+  border.AddArc((REAL)width-30.0f,(REAL)height-30.0f,29.0f,29.0f,0.0f,90.0f);
+  border.AddArc(0.5f,(REAL)height-30.0f,29.0f,29.0f,90.0f,90.0f);
+  border.CloseFigure();g.DrawPath(&outline,&border);
+
+  VMark(g,17.0f,12.0f);
+  Label(g,L"VEYRA",53.0f,8.0f,105.0f,22.0f,13.0f,Color(255,239,247,255),true);
+  Label(g,L"BROWSE BEYOND",54.0f,28.0f,115.0f,14.0f,7.0f,Color(255,111,140,165),true);
+  SolidBrush separator(Color(255,40,57,75));g.FillRectangle(&separator,14,43,width-28,1);
+
+  for(int i=0;i<static_cast<int>(g_menuItems.size());++i){
+    const auto& item=g_menuItems[static_cast<std::size_t>(i)];
+    const int top=MenuItemTop(i);
+    if(item.heading){
+      Label(g,item.label,20.0f,(REAL)top,static_cast<REAL>(width-40),24.0f,
+            8.0f,Color(255,112,145,165),true);
+      continue;
+    }
+    if(i==g_menuHover)
+      Round(g,RectF(10.0f,(REAL)top+1.0f,(REAL)width-20.0f,34.0f),8.0f,
+            Color(255,30,48,65));
+    SvgIcons::Draw(g,item.icon.c_str(),RectF(20.0f,(REAL)top+10.0f,16.0f,16.0f),
+                   i==g_menuHover?255:190);
+    Label(g,item.label,47.0f,(REAL)top+1.0f,(REAL)width-61.0f,35.0f,10.5f,
+          i==g_menuHover?Color(255,241,248,252):Color(255,190,207,221));
+  }
+}
+
+LRESULT CALLBACK MenuProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
+  switch(msg){
+    case WM_PAINT:{
+      PAINTSTRUCT ps{};HDC dc=BeginPaint(hwnd,&ps);PaintMenu(hwnd,dc);EndPaint(hwnd,&ps);return 0;
+    }
+    case WM_ERASEBKGND:return 1;
+    case WM_MOUSEMOVE:{
+      TRACKMOUSEEVENT tracking{sizeof(tracking),TME_LEAVE,hwnd,0};TrackMouseEvent(&tracking);
+      const int hovered=MenuItemAt(GET_Y_LPARAM(lp));
+      if(hovered!=g_menuHover){g_menuHover=hovered;InvalidateRect(hwnd,nullptr,FALSE);}
+      return 0;
+    }
+    case WM_MOUSELEAVE:
+      if(g_menuHover!=-1){g_menuHover=-1;InvalidateRect(hwnd,nullptr,FALSE);}
+      return 0;
+    case WM_LBUTTONUP:{
+      const int index=MenuItemAt(GET_Y_LPARAM(lp));
+      if(index>=0&&index<static_cast<int>(g_menuItems.size())){
+        const auto command=g_menuItems[static_cast<std::size_t>(index)].command;
+        if(command&&g_menuOwner)PostMessageW(g_menuOwner,WM_VEYRA_MENU_COMMAND,command,0);
+      }
+      DestroyWindow(hwnd);return 0;
+    }
+    case WM_KEYDOWN:
+      if(wp==VK_ESCAPE){DestroyWindow(hwnd);return 0;}
+      break;
+    case WM_ACTIVATE:
+      if(LOWORD(wp)==WA_INACTIVE)DestroyWindow(hwnd);
+      return 0;
+    case WM_NCDESTROY:
+      if(g_menuWindow==hwnd)g_menuWindow=nullptr;
+      g_menuHover=-1;
+      return DefWindowProcW(hwnd,msg,wp,lp);
+  }
+  return DefWindowProcW(hwnd,msg,wp,lp);
+}
+
+bool RegisterMenuClass(HINSTANCE instance) {
+  WNDCLASSEXW wc{};wc.cbSize=sizeof(wc);wc.lpfnWndProc=MenuProc;
+  wc.hInstance=instance;wc.hCursor=LoadCursorW(nullptr,IDC_ARROW);
+  wc.lpszClassName=kMenuClassName;
+  if(RegisterClassExW(&wc))return true;
+  return GetLastError()==ERROR_CLASS_ALREADY_EXISTS;
 }
 
 void ShowMenu(HWND hwnd) {
-  HMENU menu = CreatePopupMenu();
-  if (!menu) return;
-
-  AppendMenuW(menu, MF_STRING, ID_MENU_BOOKMARK_THIS, L"Bookmark this page\tCtrl+D");
-
-  HMENU bookmarks = CreatePopupMenu();
-  AppendSavedPages(bookmarks, AppState::Get().Bookmarks(), ID_MENU_BOOKMARK_BASE, 100);
-  AppendMenuW(menu, MF_POPUP, (UINT_PTR)bookmarks, L"Bookmarks");
-
-  HMENU history = CreatePopupMenu();
-  AppendSavedPages(history, AppState::Get().History(), ID_MENU_HISTORY_BASE, 200);
-  AppendMenuW(history, MF_SEPARATOR, 0, nullptr);
-  AppendMenuW(history, MF_STRING, ID_MENU_CLEAR_HISTORY, L"Clear browsing history");
-  AppendMenuW(menu, MF_POPUP, (UINT_PTR)history, L"History");
-
-  AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-  AppendMenuW(menu, MF_STRING, ID_MENU_OPEN_DOWNLOADS, L"Open downloads folder");
-  AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-  AppendMenuW(menu, MF_STRING, ID_MENU_NEW_TAB, L"New tab\tCtrl+T");
-  AppendMenuW(menu, MF_STRING, ID_MENU_RELOAD, L"Reload page\tCtrl+R");
-  AppendMenuW(menu, MF_STRING, ID_MENU_CLOSE_TAB, L"Close tab\tCtrl+W");
-  AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-  AppendMenuW(menu, MF_STRING, ID_MENU_ABOUT, L"About VEYRA");
-  AppendMenuW(menu, MF_STRING, ID_MENU_EXIT, L"Exit");
-
-  POINT p{};
-  GetCursorPos(&p);
-  SetForegroundWindow(hwnd);
-  TrackPopupMenu(menu, TPM_RIGHTBUTTON | TPM_LEFTALIGN, p.x, p.y, 0, hwnd, nullptr);
-  DestroyMenu(menu);
+  if(g_menuWindow){DestroyWindow(g_menuWindow);return;}
+  BuildMenuItems();
+  int height=48;
+  for(const auto& item:g_menuItems)height+=item.heading?25:37;
+  height+=12;
+  constexpr int width=286;
+  RECT owner{};GetWindowRect(hwnd,&owner);
+  MONITORINFO monitor{sizeof(monitor)};
+  GetMonitorInfoW(MonitorFromWindow(hwnd,MONITOR_DEFAULTTONEAREST),&monitor);
+  int x=owner.right-width-12;
+  int y=owner.top+100;
+  if(y+height>monitor.rcWork.bottom-8)y=monitor.rcWork.bottom-height-8;
+  if(y<monitor.rcWork.top+8)y=monitor.rcWork.top+8;
+  if(x<monitor.rcWork.left+8)x=monitor.rcWork.left+8;
+  if(!RegisterMenuClass(GetModuleHandleW(nullptr)))return;
+  g_menuOwner=hwnd;g_menuHover=-1;
+  g_menuWindow=CreateWindowExW(WS_EX_TOOLWINDOW|WS_EX_TOPMOST,kMenuClassName,L"",
+      WS_POPUP,x,y,width,height,hwnd,nullptr,GetModuleHandleW(nullptr),nullptr);
+  if(!g_menuWindow)return;
+  HRGN region=CreateRoundRectRgn(0,0,width+1,height+1,24,24);
+  if(region)SetWindowRgn(g_menuWindow,region,TRUE);
+  ShowWindow(g_menuWindow,SW_SHOWNORMAL);
+  SetForegroundWindow(g_menuWindow);
+  SetFocus(g_menuWindow);
 }
+
 void Act(HWND hwnd,const Hit& hit) {
   auto& a=AppState::Get();
   switch(hit.action){
@@ -334,7 +460,30 @@ LRESULT CALLBACK Proc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
         InvalidateRect(hwnd, &top, FALSE);
       }
       return 0;
-    case WM_PAINT:{PAINTSTRUCT ps{};HDC dc=BeginPaint(hwnd,&ps);Paint(hwnd,dc);EndPaint(hwnd,&ps);return 0;}
+    case WM_PAINT:{
+      PAINTSTRUCT ps{};
+      HDC target=BeginPaint(hwnd,&ps);
+      RECT client{};
+      GetClientRect(hwnd,&client);
+      const int width=client.right;
+      const int height=std::min<LONG>(client.bottom,kChromeHeight);
+      if(width>0&&height>0){
+        HDC buffer=CreateCompatibleDC(target);
+        HBITMAP surface=CreateCompatibleBitmap(target,width,height);
+        if(buffer&&surface){
+          HGDIOBJ previous=SelectObject(buffer,surface);
+          Paint(hwnd,buffer);
+          BitBlt(target,0,0,width,height,buffer,0,0,SRCCOPY);
+          if(previous)SelectObject(buffer,previous);
+        }else{
+          Paint(hwnd,target);
+        }
+        if(surface)DeleteObject(surface);
+        if(buffer)DeleteDC(buffer);
+      }
+      EndPaint(hwnd,&ps);
+      return 0;
+    }
     case WM_ERASEBKGND:return 1;
     case WM_CTLCOLOREDIT:SetTextColor((HDC)wp,RGB(231,241,250));SetBkColor((HDC)wp,RGB(20,31,47));return (LRESULT)g_editBrush;
     case WM_COMMAND: {
@@ -388,9 +537,55 @@ LRESULT CALLBACK Proc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
       if (!AppState::Get().AddBookmark()) MessageBeep(MB_ICONWARNING);
       InvalidateRect(hwnd, nullptr, FALSE);
       return 0;
+    case WM_VEYRA_MENU_COMMAND:{
+      const UINT command=static_cast<UINT>(wp);
+      if(command>=ID_MENU_BOOKMARK_BASE&&command<ID_MENU_BOOKMARK_BASE+4){
+        AppState::Get().OpenBookmark(command-ID_MENU_BOOKMARK_BASE);return 0;
+      }
+      if(command>=ID_MENU_HISTORY_BASE&&command<ID_MENU_HISTORY_BASE+4){
+        AppState::Get().OpenHistory(command-ID_MENU_HISTORY_BASE);return 0;
+      }
+      switch(command){
+        case ID_MENU_NEW_TAB:AppState::Get().CreateTab();return 0;
+        case ID_MENU_BOOKMARK_THIS:
+          if(!AppState::Get().AddBookmark())MessageBeep(MB_ICONWARNING);
+          InvalidateRect(hwnd,nullptr,FALSE);return 0;
+        case ID_MENU_OPEN_DOWNLOADS:OpenDownloadsFolder(hwnd);return 0;
+        case ID_MENU_CLEAR_HISTORY:AppState::Get().ClearHistory();return 0;
+        case ID_MENU_SETTINGS:AppState::Get().CreateTab(AppState::HomeUrl()+L"#settings");return 0;
+        case ID_MENU_ABOUT:
+          MessageBoxW(hwnd,L"VEYRA 0.2.0\nBrowse beyond.\n\nPowered by Chromium Embedded Framework.",
+                      L"About VEYRA",MB_OK|MB_ICONINFORMATION);return 0;
+        case ID_MENU_EXIT:SendMessageW(hwnd,WM_CLOSE,0,0);return 0;
+      }
+      return 0;
+    }
+    case WM_VEYRA_UPDATE_READY:{
+      std::unique_ptr<std::wstring> archive(reinterpret_cast<std::wstring*>(lp));
+      std::wstring error;
+      if(archive&&VeyraUpdater::LaunchInstaller(*archive,GetCurrentProcessId(),error)){
+        AppState::Get().BeginShutdown();
+      }else{
+        NotifyUpdateFailed(static_cast<int>(wp));
+        MessageBoxW(hwnd,error.empty()?L"Could not prepare the VEYRA update.":error.c_str(),
+                    L"VEYRA updater",MB_OK|MB_ICONERROR);
+      }
+      return 0;
+    }
+    case WM_VEYRA_UPDATE_FAILED:{
+      std::unique_ptr<std::wstring> error(reinterpret_cast<std::wstring*>(lp));
+      NotifyUpdateFailed(static_cast<int>(wp));
+      MessageBoxW(hwnd,error?error->c_str():L"Update download failed.",
+                  L"VEYRA updater",MB_OK|MB_ICONWARNING);
+      return 0;
+    }
     case WM_VEYRA_CLOSE_READY:DestroyWindow(hwnd);return 0;
     case WM_CLOSE:AppState::Get().BeginShutdown();return 0;
-    case WM_DESTROY:PostQuitMessage(0);return 0;
+    case WM_DESTROY:
+      SvgIcons::Shutdown();
+      if(g_gdiplusToken){GdiplusShutdown(g_gdiplusToken);g_gdiplusToken=0;}
+      PostQuitMessage(0);
+      return 0;
     case WM_GETMINMAXINFO: {
       auto* m = reinterpret_cast<MINMAXINFO*>(lp);
       m->ptMinTrackSize.x = 760;
@@ -419,6 +614,7 @@ void LayoutAddressEdit(HWND hwnd) {
 }
 HWND CreateVeyraWindow(HINSTANCE instance,int showCommand) {
   INITCOMMONCONTROLSEX controls{sizeof(controls),ICC_STANDARD_CLASSES};InitCommonControlsEx(&controls);
+  RegisterMenuClass(instance);
   GdiplusStartupInput startup;GdiplusStartup(&g_gdiplusToken,&startup,nullptr);
   WNDCLASSEXW wc{};wc.cbSize=sizeof(wc);wc.style=CS_HREDRAW|CS_VREDRAW;wc.lpfnWndProc=Proc;
   wc.hInstance=instance;wc.hCursor=LoadCursorW(nullptr,IDC_ARROW);wc.hIcon=LoadIconW(nullptr,IDI_APPLICATION);

@@ -4,6 +4,7 @@ on:
   # Only browser/build changes should trigger the expensive Windows + CEF job.
   push:
     branches: [main]
+    tags: ['v*']
     paths:
       - CMakeLists.txt
       - 'src/**'
@@ -80,3 +81,24 @@ jobs:
           path: build/out/
           if-no-files-found: error
           retention-days: 14
+
+  publish-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: windows-2022
+    permissions:
+      contents: write
+    steps:
+      - name: Download packaged VEYRA build
+        uses: actions/download-artifact@v7
+        with:
+          name: VEYRA-windows-x64
+          path: VEYRA-windows-x64
+      - name: Create release archive
+        shell: pwsh
+        run: Compress-Archive -Path "VEYRA-windows-x64/*" -DestinationPath "VEYRA-windows-x64.zip" -CompressionLevel Optimal
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: gh release create "$env:GITHUB_REF_NAME" "VEYRA-windows-x64.zip" --verify-tag --title "VEYRA $env:GITHUB_REF_NAME" --generate-notes

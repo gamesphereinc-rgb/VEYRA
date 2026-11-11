@@ -1,6 +1,7 @@
 #include "src/browser_client.h"
 #include "src/app_state.h"
 #include "src/messages.h"
+#include "src/update_manager.h"
 #include <filesystem>
 #include <shlobj.h>
 
@@ -25,12 +26,75 @@ CefRefPtr<BrowserClient> GetBrowserClient() {
   return g_client;
 }
 
+namespace {
+int HexValue(wchar_t c) {
+  if(c>=L'0'&&c<=L'9')return c-L'0';
+  if(c>=L'a'&&c<=L'f')return c-L'a'+10;
+  if(c>=L'A'&&c<=L'F')return c-L'A'+10;
+  return -1;
+}
+std::wstring QueryParameter(const std::wstring& url,const std::wstring& key) {
+  const auto query = url.find(L'?');
+  if (query == std::wstring::npos) return {};
+
+  std::size_t cursor = query + 1;
+  while (cursor < url.size()) {
+    const auto end = url.find_first_of(L"&#", cursor);
+    const auto tokenEnd = end == std::wstring::npos ? url.size() : end;
+    const auto equals = url.find(L'=', cursor);
+    if (equals != std::wstring::npos && equals < tokenEnd &&
+        url.compare(cursor, equals - cursor, key) == 0) {
+      const auto encoded = url.substr(equals + 1, tokenEnd - equals - 1);
+      std::wstring decoded;
+      for (std::size_t i = 0; i < encoded.size(); ++i) {
+        if (encoded[i] == L'%' && i + 2 < encoded.size()) {
+          const int high = HexValue(encoded[i + 1]);
+          const int low = HexValue(encoded[i + 2]);
+          if (high >= 0 && low >= 0) {
+            decoded.push_back(static_cast<wchar_t>((high << 4) | low));
+            i += 2;
+            continue;
+          }
+        }
+        decoded.push_back(encoded[i] == L'+' ? L' ' : encoded[i]);
+      }
+      return decoded;
+    }
+    if (end == std::wstring::npos) break;
+    cursor = end + 1;
+  }
+  return {};
+}
+}
+
+bool BrowserClient::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
+    CefRefPtr<CefFrame> frame, CefRefPtr<CefRequest> request, bool, bool) {
+  if(!request||!browser||!frame||!frame->IsMain())return false;
+  const auto url=request->GetURL().ToWString();
+  if(url.rfind(L"veyra://install-update",0)!=0)return false;
+  const auto current = browser->GetMainFrame()->GetURL().ToWString();
+  const auto home = AppState::Get().HomeUrl();
+  const bool trustedHome = current == home ||
+      (current.size() > home.size() &&
+       current.compare(0, home.size(), home) == 0 &&
+       current[home.size()] == L'#');
+  if (!trustedHome) {
+    MessageBeep(MB_ICONWARNING);
+    return true;
+  }
+  const auto download=QueryParameter(url,L"url");
+  const auto digest=QueryParameter(url,L"sha256");
+  VeyraUpdater::StartDownload(AppState::Get().MainWindow(),
+                               browser->GetIdentifier(), download, digest);
+  return true;
+}
+
 bool BrowserClient::OnBeforePopup(CefRefPtr<CefBrowser>,
                                   CefRefPtr<CefFrame>,
                                   int,
                                   const CefString& target_url,
                                   const CefString&,
-                                  WindowOpenDisposition,
+                                  CefLifeSpanHandler::WindowOpenDisposition,
                                   bool,
                                   const CefPopupFeatures&,
                                   CefWindowInfo&,

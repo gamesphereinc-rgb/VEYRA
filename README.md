@@ -37,6 +37,9 @@ These development builds are not code-signed, so Windows may show an unknown-pub
 - Address bar with HTTPS navigation and DuckDuckGo search.
 - Back, forward, reload, stop, and home controls.
 - Redesigned VEYRA new-tab page with web search, editable local shortcuts, date, and clock.
+- In-page Settings for themes, search engine choice, and built-in or custom new-tab backgrounds.
+- Custom SVG toolbar icons, a custom browser popup menu, and a double-buffered native chrome paint path.
+- Release checking and a verified updater flow for published GitHub releases; stable releases are published from version tags.
 - Persistent bookmarks and browsing history stored in the local VEYRA profile.
 - Downloads saved to the current Windows user's Downloads folder, with duplicate filenames kept separate.
 - Persistent browser profile and cache in the current Windows user's Local AppData.
@@ -47,7 +50,7 @@ Keyboard shortcuts: **Ctrl+T** new tab, **Ctrl+W** close tab, **Ctrl+L** focus a
 
 ## Still being developed
 
-A dedicated downloads manager, extensions, private windows, settings, profile sync, automatic updates, and a polished first-run experience are not implemented yet. Bookmarks and history are early implementations and still need more testing. Some browser behaviours and security controls still need testing.
+A dedicated downloads manager, extensions, private windows, profile sync, and a polished first-run experience are not implemented yet. The updater requires a published stable release with a checksum and still needs end-to-end testing. Bookmarks and history are early implementations and still need more testing. Some browser behaviours and security controls still need testing.
 
 ## Technology
 
