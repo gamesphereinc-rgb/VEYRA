@@ -61,6 +61,10 @@ VEYRA's original project code is provided under the **PolyForm Strict License 1.
 
 The repository is public so people can inspect the project. Public visibility does not grant additional copyright permissions. Official VEYRA builds are provided by the project owner.
 
+## Security
+
+Please read the [security policy](SECURITY.md) before reporting a suspected vulnerability. Do not publish security details in public issues. Private vulnerability reporting should be used when enabled.
+
 ## Bugs and suggestions
 
-Found a bug or have an idea? Open an [issue](https://github.com/gamesphereinc-rgb/VEYRA/issues). The licence does not automatically authorise code modifications or pull-request contributions; please contact the project owner for permission before proposing code changes.
+Found a non-security bug or have an idea? Open an [issue](https://github.com/gamesphereinc-rgb/VEYRA/issues). The licence does not automatically authorise code modifications or pull-request contributions; please contact the project owner for permission before proposing code changes.
