@@ -1,14 +1,19 @@
 name: Windows build
 
 on:
+  # Only browser/build changes should trigger the expensive Windows + CEF job.
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
+    paths:
+      - CMakeLists.txt
+      - 'src/**'
+      - 'ui/**'
+      - 'resources/**'
+      - 'scripts/**'
+      - '.github/workflows/windows-build.yml'
+  # Use workflow_dispatch for a deliberate manual test build from a selected ref.
   workflow_dispatch:
 
-# Keep only the newest build for this branch/PR so a rapid series of commits
-# does not launch several 350 MB CEF downloads at once.
 concurrency:
   group: veyra-windows-${{ github.ref }}
   cancel-in-progress: true
@@ -18,8 +23,10 @@ permissions:
 
 jobs:
   build:
+    # Dependabot action-version PRs do not change VEYRA itself.
+    if: github.actor != 'dependabot[bot]'
     runs-on: windows-2022
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - name: Check out source
         uses: actions/checkout@v7
@@ -27,9 +34,25 @@ jobs:
       - name: Set up CMake
         uses: lukka/get-cmake@latest
 
+      - name: Restore verified CEF cache
+        id: cef-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: third_party/cef/cef_binary_154.0.34+g14c5a08+chromium-154.0.8037.98_windows64
+          key: cef-windows-x64-154.0.34-g14c5a08-chromium-154.0.8037.98
+
       - name: Download and verify CEF
+        id: cef-setup
         shell: pwsh
         run: ./scripts/setup.ps1 -SkipConfigure
+
+      # Save immediately after CEF is ready, even if a later compile step fails.
+      - name: Save verified CEF cache
+        if: steps.cef-setup.outcome == 'success' && steps.cef-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: third_party/cef/cef_binary_154.0.34+g14c5a08+chromium-154.0.8037.98_windows64
+          key: cef-windows-x64-154.0.34-g14c5a08-chromium-154.0.8037.98
 
       - name: Configure
         shell: pwsh
