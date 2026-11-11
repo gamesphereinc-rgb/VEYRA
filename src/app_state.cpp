@@ -79,6 +79,7 @@ void AppState::ActivateTab(int id) {
   active_id_ = id;
   LayoutTabs();
   RefreshChrome();
+  FocusBrowser();
 }
 void AppState::CloseActiveTab() { if (active_id_ != -1) CloseTab(active_id_); }
 void AppState::CloseTab(int id) {
@@ -107,6 +108,11 @@ void AppState::GoHome() { NavigateActive(HomeUrl()); }
 void AppState::FocusAddress() {
   if (address_edit_) { SetFocus(address_edit_); SendMessageW(address_edit_, EM_SETSEL, 0, -1); }
 }
+void AppState::FocusBrowser() {
+  if (auto* tab = FindTab(active_id_); tab && tab->browser) {
+    tab->browser->GetHost()->SetFocus(true);
+  }
+}
 void AppState::BeginShutdown() {
   if (closing_) return;
   closing_ = true;
@@ -126,6 +132,7 @@ void AppState::OnBrowserCreated(CefRefPtr<CefBrowser> browser) {
   active_id_ = tab.id;
   LayoutTabs();
   RefreshChrome();
+  FocusBrowser();
 }
 void AppState::OnBrowserClosed(CefRefPtr<CefBrowser> browser) {
   const int id = browser->GetIdentifier();
