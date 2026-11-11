@@ -81,7 +81,12 @@
     document.querySelectorAll("[data-settings-nav]").forEach(item=>item.classList.remove("active"));link.classList.add("active");
   }));
   let availableUpdate = null;
+  let releasePage = null;
   updateButton.addEventListener("click",async()=>{
+    if(releasePage){
+      window.open(releasePage,"_blank","noopener");
+      return;
+    }
     if(availableUpdate){
       updateButton.disabled=true;
       updateStatus.textContent="Starting secure download and checksum verification…";
@@ -116,8 +121,9 @@
             updateButton.textContent="Download & install";
           }else{
             updateStatus.textContent="VEYRA "+release.tag_name+" is available, but this release has no verifiable package. Open the release page to review it.";
+            updateStatus.textContent="VEYRA "+release.tag_name+" is available, but this release has no verifiable package. Open the release page to review it.";
+            releasePage=release.html_url;
             updateButton.textContent="View release";
-            updateButton.onclick=()=>window.open(release.html_url,"_blank","noopener");
           }
         }
       }
