@@ -44,6 +44,7 @@ class AppState final {
   const std::vector<SavedPage>& History() const { return history_; }
   void FocusAddress();
   void FocusBrowser();
+  void NotifyTabUpdateFailed(int id);
   void BeginShutdown();
   void ResizeTabs();
   void OnBrowserCreated(CefRefPtr<CefBrowser> browser);
