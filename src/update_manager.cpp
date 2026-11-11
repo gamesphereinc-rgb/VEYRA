@@ -212,7 +212,10 @@ bool LaunchInstaller(const std::wstring& archivePath, DWORD processId, std::wstr
   std::error_code ec;
   std::filesystem::copy_file(sourceScript, script,
       std::filesystem::copy_options::overwrite_existing, ec);
-  if (ec) { error = L"Could not prepare the updater script. " + ec.message(); return false; }
+  if (ec) {
+    error = L"Could not prepare the updater script. Check that the installed VEYRA folder is writable.";
+    return false;
+  }
 
   wchar_t system[MAX_PATH]{};
   GetSystemDirectoryW(system, MAX_PATH);

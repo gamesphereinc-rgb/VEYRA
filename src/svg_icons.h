@@ -1,4 +1,6 @@
 #pragma once
+#include <windows.h>
+#include <wingdi.h>
 #include <gdiplus.h>
 
 namespace SvgIcons {
