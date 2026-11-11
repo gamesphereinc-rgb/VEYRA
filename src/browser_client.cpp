@@ -84,7 +84,8 @@ bool BrowserClient::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
   }
   const auto download=QueryParameter(url,L"url");
   const auto digest=QueryParameter(url,L"sha256");
-  VeyraUpdater::StartDownload(AppState::Get().MainWindow(),download,digest);
+  VeyraUpdater::StartDownload(AppState::Get().MainWindow(),
+                               browser->GetIdentifier(), download, digest);
   return true;
 }
 
