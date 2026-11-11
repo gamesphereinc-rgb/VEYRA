@@ -95,6 +95,24 @@ void WindowControl(Graphics& g, int x, int control, bool maximized) {
   }
 }
 
+void OpenDownloadsFolder(HWND owner) {
+  PWSTR downloads = nullptr;
+  const HRESULT result = SHGetKnownFolderPath(FOLDERID_Downloads, 0, nullptr, &downloads);
+  if (FAILED(result) || !downloads) {
+    MessageBoxW(owner, L"Could not locate the Windows Downloads folder.",
+                L"VEYRA", MB_OK | MB_ICONWARNING);
+    return;
+  }
+
+  const auto opened = reinterpret_cast<INT_PTR>(
+      ShellExecuteW(owner, L"open", downloads, nullptr, nullptr, SW_SHOWNORMAL));
+  CoTaskMemFree(downloads);
+  if (opened <= 32) {
+    MessageBoxW(owner, L"Could not open the Downloads folder.",
+                L"VEYRA", MB_OK | MB_ICONWARNING);
+  }
+}
+
 void Paint(HWND hwnd,HDC hdc) {
   RECT cr{}; GetClientRect(hwnd,&cr); const int w=cr.right;
   Graphics g(hdc); g.SetSmoothingMode(SmoothingModeAntiAlias); g.SetTextRenderingHint(TextRenderingHintClearTypeGridFit);
