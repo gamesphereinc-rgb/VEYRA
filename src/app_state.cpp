@@ -3,6 +3,8 @@
 #include <cwctype>
 #include <filesystem>
 #include <string>
+#include <iterator>
+#include <shlobj.h>
 #include "include/cef_browser.h"
 #include "src/browser_client.h"
 #include "src/messages.h"
@@ -43,18 +45,49 @@ bool LooksLikeHost(const std::wstring& s) {
   return s.find(L'.') != std::wstring::npos || StartsWith(s, L"localhost") ||
          StartsWith(s, L"127.0.0.1") || StartsWith(s, L"[::1]");
 }
+
+std::wstring BrowserDataFile() {
+  PWSTR known = nullptr;
+  std::filesystem::path root;
+  if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &known))) {
+    root = known;
+    CoTaskMemFree(known);
+  } else {
+    wchar_t temp[MAX_PATH]{};
+    GetTempPathW(MAX_PATH, temp);
+    root = temp;
+  }
+  root /= L"VEYRA";
+  root /= L"Profile";
+  std::error_code ec;
+  std::filesystem::create_directories(root, ec);
+  return (root / L"browser-data.ini").wstring();
+}
+
+std::wstring ReadIni(const wchar_t* section, const wchar_t* key,
+                     const std::wstring& path) {
+  wchar_t value[8192]{};
+  GetPrivateProfileStringW(section, key, L"", value,
+                           static_cast<DWORD>(std::size(value)), path.c_str());
+  return value;
+}
 }
 
 AppState& AppState::Get() { static AppState state; return state; }
 void AppState::SetWindow(HWND hwnd) { window_ = hwnd; }
 void AppState::SetAddressEdit(HWND edit) { address_edit_ = edit; }
-void AppState::Start() { if (window_ && tabs_.empty()) CreateTab(HomeUrl()); }
+void AppState::Start() {
+  LoadBrowserData();
+  if (window_ && tabs_.empty()) CreateTab(HomeUrl());
+}
 
 std::wstring AppState::HomeUrl() {
   wchar_t module[MAX_PATH]{};
   GetModuleFileNameW(nullptr, module, MAX_PATH);
   auto path = std::filesystem::path(module).parent_path() / L"ui" / L"newtab.html";
-  return L"file:///" + Encode(path.wstring(), true);
+  // Convert Windows separators before URL-encoding. Encoding the native
+  // path directly turns backslashes into %5C and breaks Chromium file URLs.
+  return L"file:///" + Encode(path.generic_wstring(), true);
 }
 
 void AppState::CreateTab(const std::wstring& requested) {
@@ -107,6 +140,102 @@ void AppState::GoForward() { if (auto* t = FindTab(active_id_); t && t->browser 
 void AppState::Reload() { if (auto* t = FindTab(active_id_); t && t->browser) t->browser->Reload(); }
 void AppState::Stop() { if (auto* t = FindTab(active_id_); t && t->browser) t->browser->StopLoad(); }
 void AppState::GoHome() { NavigateActive(HomeUrl()); }
+
+bool AppState::AddBookmark() {
+  auto* tab = FindTab(active_id_);
+  if (!tab || tab->url.empty() ||
+      tab->url.find(L"newtab.html") != std::wstring::npos) return false;
+  auto it = std::find_if(bookmarks_.begin(), bookmarks_.end(),
+    [&](const SavedPage& page) { return page.url == tab->url; });
+  if (it == bookmarks_.end()) {
+    bookmarks_.insert(bookmarks_.begin(), SavedPage{tab->title, tab->url});
+  } else {
+    it->title = tab->title;
+    std::rotate(bookmarks_.begin(), it, std::next(it));
+  }
+  if (bookmarks_.size() > 100) bookmarks_.resize(100);
+  SaveBrowserData();
+  return true;
+}
+
+bool AppState::IsBookmarked(const std::wstring& url) const {
+  return std::any_of(bookmarks_.begin(), bookmarks_.end(),
+    [&](const SavedPage& page) { return page.url == url; });
+}
+
+void AppState::OpenBookmark(std::size_t index) {
+  if (index < bookmarks_.size()) NavigateActive(bookmarks_[index].url);
+}
+
+void AppState::OpenHistory(std::size_t index) {
+  if (index < history_.size()) NavigateActive(history_[index].url);
+}
+
+void AppState::ClearHistory() {
+  history_.clear();
+  SaveBrowserData();
+}
+
+void AppState::LoadBrowserData() {
+  const auto path = BrowserDataFile();
+  bookmarks_.clear();
+  history_.clear();
+
+  const int bookmarkCount = std::clamp(
+    static_cast<int>(GetPrivateProfileIntW(L"Meta", L"BookmarkCount", 0, path.c_str())), 0, 100);
+  for (int i = 0; i < bookmarkCount; ++i) {
+    const auto section = L"Bookmark" + std::to_wstring(i);
+    auto title = ReadIni(section.c_str(), L"Title", path);
+    auto url = ReadIni(section.c_str(), L"Url", path);
+    if (!url.empty()) bookmarks_.push_back({title.empty() ? L"Bookmark" : title, url});
+  }
+
+  const int historyCount = std::clamp(
+    static_cast<int>(GetPrivateProfileIntW(L"Meta", L"HistoryCount", 0, path.c_str())), 0, 200);
+  for (int i = 0; i < historyCount; ++i) {
+    const auto section = L"History" + std::to_wstring(i);
+    auto title = ReadIni(section.c_str(), L"Title", path);
+    auto url = ReadIni(section.c_str(), L"Url", path);
+    if (!url.empty()) history_.push_back({title.empty() ? url : title, url});
+  }
+}
+
+void AppState::SaveBrowserData() const {
+  const auto path = BrowserDataFile();
+  for (std::size_t i = 0; i < bookmarks_.size(); ++i) {
+    const auto section = L"Bookmark" + std::to_wstring(i);
+    WritePrivateProfileStringW(section.c_str(), L"Title", bookmarks_[i].title.c_str(), path.c_str());
+    WritePrivateProfileStringW(section.c_str(), L"Url", bookmarks_[i].url.c_str(), path.c_str());
+  }
+  for (std::size_t i = 0; i < history_.size(); ++i) {
+    const auto section = L"History" + std::to_wstring(i);
+    WritePrivateProfileStringW(section.c_str(), L"Title", history_[i].title.c_str(), path.c_str());
+    WritePrivateProfileStringW(section.c_str(), L"Url", history_[i].url.c_str(), path.c_str());
+  }
+  const auto bookmarkCount = std::to_wstring(bookmarks_.size());
+  const auto historyCount = std::to_wstring(history_.size());
+  WritePrivateProfileStringW(L"Meta", L"BookmarkCount", bookmarkCount.c_str(), path.c_str());
+  WritePrivateProfileStringW(L"Meta", L"HistoryCount", historyCount.c_str(), path.c_str());
+}
+
+void AppState::RecordHistory(int tabId, const std::wstring& url) {
+  if (url.empty() || url.find(L"newtab.html") != std::wstring::npos ||
+      StartsWith(url, L"file://") || StartsWith(url, L"about:")) return;
+
+  auto* tab = FindTab(tabId);
+  std::wstring title = tab ? tab->title : url;
+  auto it = std::find_if(history_.begin(), history_.end(),
+    [&](const SavedPage& page) { return page.url == url; });
+  if (it != history_.end()) {
+    if ((title.empty() || title == L"New tab") && !it->title.empty())
+      title = it->title;
+    history_.erase(it);
+  }
+  history_.insert(history_.begin(), SavedPage{title.empty() ? url : title, url});
+  if (history_.size() > 200) history_.resize(200);
+  SaveBrowserData();
+}
+
 void AppState::FocusAddress() {
   if (address_edit_) { SetFocus(address_edit_); SendMessageW(address_edit_, EM_SETSEL, 0, -1); }
 }
@@ -156,12 +285,19 @@ void AppState::OnTitleChanged(int id, const std::wstring& title) {
   if (auto* t = FindTab(id)) {
     t->title = title.empty() ? L"New tab" : title;
     if (id == active_id_) SetWindowTextW(window_, (t->title + L" — VEYRA").c_str());
+    auto history = std::find_if(history_.begin(), history_.end(),
+      [&](const SavedPage& page) { return page.url == t->url; });
+    if (history != history_.end()) {
+      history->title = t->title;
+      SaveBrowserData();
+    }
     InvalidateRect(window_, nullptr, FALSE);
   }
 }
 void AppState::OnAddressChanged(int id, const std::wstring& url) {
   if (auto* t = FindTab(id)) {
     t->url = url;
+    RecordHistory(id, url);
     if (id == active_id_ && address_edit_ && GetFocus() != address_edit_) {
       const auto shown = url.find(L"newtab.html") != std::wstring::npos ? L"" : url;
       SetWindowTextW(address_edit_, shown.c_str());

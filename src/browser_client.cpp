@@ -64,6 +64,7 @@ bool BrowserClient::OnPreKeyEvent(CefRefPtr<CefBrowser>, const CefKeyEvent& even
       case 'W': message = WM_VEYRA_CLOSE_TAB; break;
       case 'L': message = WM_VEYRA_FOCUS_ADDRESS; break;
       case 'R': message = WM_VEYRA_RELOAD; break;
+      case 'D': message = WM_VEYRA_BOOKMARK; break;
       default: return false;
     }
   } else if (key == VK_F5) {

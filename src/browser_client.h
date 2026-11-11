@@ -1,6 +1,7 @@
 #pragma once
 #include "include/cef_client.h"
 #include "include/cef_display_handler.h"
+#include "include/cef_download_handler.h"
 #include "include/cef_keyboard_handler.h"
 #include "include/cef_life_span_handler.h"
 #include "include/cef_load_handler.h"
@@ -9,7 +10,8 @@ class BrowserClient final : public CefClient,
                             public CefLifeSpanHandler,
                             public CefLoadHandler,
                             public CefDisplayHandler,
-                            public CefKeyboardHandler {
+                            public CefKeyboardHandler,
+                            public CefDownloadHandler {
  public:
   BrowserClient() = default;
 
@@ -17,6 +19,7 @@ class BrowserClient final : public CefClient,
   CefRefPtr<CefLoadHandler> GetLoadHandler() override { return this; }
   CefRefPtr<CefDisplayHandler> GetDisplayHandler() override { return this; }
   CefRefPtr<CefKeyboardHandler> GetKeyboardHandler() override { return this; }
+  CefRefPtr<CefDownloadHandler> GetDownloadHandler() override { return this; }
 
   bool OnBeforePopup(CefRefPtr<CefBrowser> browser,
                      CefRefPtr<CefFrame> frame,
@@ -40,6 +43,10 @@ class BrowserClient final : public CefClient,
                        const CefString& url) override;
   bool OnPreKeyEvent(CefRefPtr<CefBrowser> browser, const CefKeyEvent& event,
                      CefEventHandle os_event, bool* is_keyboard_shortcut) override;
+  bool OnBeforeDownload(CefRefPtr<CefBrowser> browser,
+                        CefRefPtr<CefDownloadItem> download_item,
+                        const CefString& suggested_name,
+                        CefRefPtr<CefBeforeDownloadCallback> callback) override;
 
  private:
   IMPLEMENT_REFCOUNTING(BrowserClient);

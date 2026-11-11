@@ -36,7 +36,9 @@ These development builds are not code-signed, so Windows may show an unknown-pub
 - Multiple Chromium tabs.
 - Address bar with HTTPS navigation and DuckDuckGo search.
 - Back, forward, reload, stop, and home controls.
-- VEYRA new-tab page with web search, quick links, date, and clock.
+- Redesigned VEYRA new-tab page with web search, editable local shortcuts, date, and clock.
+- Persistent bookmarks and browsing history stored in the local VEYRA profile.
+- Downloads saved to the current Windows user's Downloads folder, with duplicate filenames kept separate.
 - Persistent browser profile and cache in the current Windows user's Local AppData.
 - Chromium's CEF bootstrap architecture for the Windows sandbox.
 - Pop-up requests open in VEYRA tabs.
@@ -45,7 +47,7 @@ Keyboard shortcuts: **Ctrl+T** new tab, **Ctrl+W** close tab, **Ctrl+L** focus a
 
 ## Still being developed
 
-Bookmarks, downloads management, full browsing history, extensions, private windows, settings, profile sync, automatic updates, and a polished first-run experience are not implemented yet. Some browser behaviours and security controls still need testing.
+A dedicated downloads manager, extensions, private windows, settings, profile sync, automatic updates, and a polished first-run experience are not implemented yet. Bookmarks and history are early implementations and still need more testing. Some browser behaviours and security controls still need testing.
 
 ## Technology
 
