@@ -170,12 +170,13 @@ std::wstring Sha256(const std::wstring& path) {
 }
 }
 
-void StartDownload(HWND window, const std::wstring& url, const std::wstring& expectedSha256) {
+void StartDownload(HWND window, int browserId, const std::wstring& url,
+                   const std::wstring& expectedSha256) {
   if (!window) return;
   if (g_running.exchange(true)) {
     MessageBeep(MB_ICONWARNING);
     auto* message = new std::wstring(L"An update is already in progress.");
-    if (!PostMessageW(window, WM_VEYRA_UPDATE_FAILED, 0,
+    if (!PostMessageW(window, WM_VEYRA_UPDATE_FAILED, static_cast<WPARAM>(browserId),
                       reinterpret_cast<LPARAM>(message))) delete message;
     return;
   }
@@ -183,11 +184,11 @@ void StartDownload(HWND window, const std::wstring& url, const std::wstring& exp
     g_running = false;
     auto* message = new std::wstring(
         L"This release has no valid SHA-256 checksum. The installer was not downloaded.");
-    if (!PostMessageW(window, WM_VEYRA_UPDATE_FAILED, 0,
+    if (!PostMessageW(window, WM_VEYRA_UPDATE_FAILED, static_cast<WPARAM>(browserId),
                       reinterpret_cast<LPARAM>(message))) delete message;
     return;
   }
-  std::thread([window, url, expectedSha256] {
+  std::thread([window, browserId, url, expectedSha256] {
     try {
       const auto path = Download(url);
       if (Lower(Sha256(path)) != Lower(expectedSha256)) {
@@ -195,14 +196,14 @@ void StartDownload(HWND window, const std::wstring& url, const std::wstring& exp
         throw std::runtime_error("The update failed its SHA-256 check and was deleted.");
       }
       auto* readyPath = new std::wstring(path);
-      if (!PostMessageW(window, WM_VEYRA_UPDATE_READY, 0,
+      if (!PostMessageW(window, WM_VEYRA_UPDATE_READY, static_cast<WPARAM>(browserId),
                         reinterpret_cast<LPARAM>(readyPath))) delete readyPath;
     } catch (const std::exception& error) {
       const int length = MultiByteToWideChar(CP_UTF8, 0, error.what(), -1, nullptr, 0);
       std::wstring message(static_cast<std::size_t>(std::max(1, length)), L'\0');
       MultiByteToWideChar(CP_UTF8, 0, error.what(), -1, message.data(), length);
       auto* failure = new std::wstring(message);
-      if (!PostMessageW(window, WM_VEYRA_UPDATE_FAILED, 0,
+      if (!PostMessageW(window, WM_VEYRA_UPDATE_FAILED, static_cast<WPARAM>(browserId),
                         reinterpret_cast<LPARAM>(failure))) delete failure;
     }
     g_running = false;
