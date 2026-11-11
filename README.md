@@ -4,66 +4,52 @@
 
 VEYRA is an independent Windows browser with its own native interface and visual identity, powered by Chromium through the Chromium Embedded Framework (CEF).
 
-It is not an Electron app and it does not use Microsoft Edge WebView2. VEYRA ships with its own CEF/Chromium runtime.
+VEYRA is not an Electron app and does not use Microsoft Edge WebView2. Its Windows download includes the VEYRA application and the CEF/Chromium runtime it needs.
 
-## Download VEYRA for Windows
+> **Early development software**
+>
+> VEYRA is an unfinished test build. Core browser features are still being developed, and security and compatibility testing are incomplete. Do not use it for sensitive browsing, passwords, payments, or other important activity.
 
-VEYRA is currently in early development. Windows x64 test builds are published as GitHub Actions artifacts when the Windows build completes successfully.
+## Download for Windows
 
-**[Open the Windows builds](https://github.com/gamesphereinc-rgb/VEYRA/actions/workflows/windows-build.yml)**
+**[Download VEYRA test builds](https://github.com/gamesphereinc-rgb/VEYRA/actions/workflows/windows-build.yml)**
 
-To download a test build:
+When a build has completed successfully:
 
-1. Open the newest run marked **Success** (green tick) for the Windows build workflow.
-2. Scroll to **Artifacts** at the bottom of that run.
+1. Open the newest successful **Windows build** run for the VEYRA development branch.
+2. Scroll down to the **Artifacts** section.
 3. Download **VEYRA-windows-x64**.
-4. Extract the downloaded ZIP to a folder.
-5. Open **VEYRA.exe** from the extracted folder.
+4. Extract the ZIP to a folder on your PC.
+5. Open **VEYRA.exe** inside the extracted folder.
 
-The ZIP contains the launcher, VEYRA application files, Chromium runtime files, and required browser resources. Keep the extracted files together: **VEYRA.exe will not work correctly if you copy it out on its own.** You do not need to install Visual Studio, CMake, or download CEF separately to run a packaged build.
+That's it. You do not need to install Visual Studio, CMake, Python, or PowerShell, and you do not need to download Chromium or CEF separately.
 
-GitHub Actions artifacts are temporary downloads and currently expire after 14 days. A missing Artifacts section means that run did not produce a downloadable package. Only use a successful build from this official repository.
+**Keep the extracted files together.** VEYRA.exe relies on the other files and folders in the package. Do not move the EXE by itself.
 
-These are unsigned development builds. Windows may show a SmartScreen or unknown-publisher warning. VEYRA is not production-ready; only test it if you understand that it is unfinished software.
+The current test packages are GitHub Actions artifacts and expire after 14 days. A run that is queued, running, cancelled, or failed does not have a usable package. Look for a completed successful run with the **VEYRA-windows-x64** artifact.
 
-## Current features
+These development builds are not code-signed, so Windows may show an unknown-publisher or SmartScreen warning. Only download builds from this official repository, and remember that this is unfinished software.
 
-- Native Windows application window and custom-drawn VEYRA browser interface.
-- Multiple independent Chromium tabs.
+## What's included so far
+
+- Native Windows application window and custom VEYRA browser interface.
+- Multiple Chromium tabs.
 - Address bar with HTTPS navigation and DuckDuckGo search.
-- Back, forward, reload/stop and home.
-- Original VEYRA new-tab page with web search, quick links, date and clock.
-- Persistent Chromium profile and cache in the current Windows user's Local AppData.
-- CEF bootstrap architecture for the Windows sandbox.
-- Keyboard shortcuts: Ctrl+T, Ctrl+W, Ctrl+L, Ctrl+R, F5, Alt+Left and Alt+Right.
-- Pop-up requests are opened as VEYRA tabs.
+- Back, forward, reload, stop, and home controls.
+- VEYRA new-tab page with web search, quick links, date, and clock.
+- Persistent browser profile and cache in the current Windows user's Local AppData.
+- Chromium's CEF bootstrap architecture for the Windows sandbox.
+- Pop-up requests open in VEYRA tabs.
 
-## Still in development
+Keyboard shortcuts: **Ctrl+T** new tab, **Ctrl+W** close tab, **Ctrl+L** focus address bar, **Ctrl+R** reload, **F5** reload, **Alt+Left** back, and **Alt+Right** forward.
 
-Bookmarks, downloads UI, full history management, extensions, private windows, settings, profile sync, browser updates, and a polished first-run experience are not implemented yet. Some browser behaviours and security controls still need testing.
+## Still being developed
+
+Bookmarks, downloads management, full browsing history, extensions, private windows, settings, profile sync, automatic updates, and a polished first-run experience are not implemented yet. Some browser behaviours and security controls still need testing.
 
 ## Technology
 
-C++20, Win32, Chromium Embedded Framework (CEF), CMake, Visual Studio 2022 and GDI+.
-
-## Build from source (developers)
-
-Running a packaged build does not require these tools. To compile VEYRA yourself, use Windows 10/11 x64 with Visual Studio 2022 and the **Desktop development with C++** workload, CMake 3.24+, and a Windows SDK.
-
-Open PowerShell in the repository and run:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/setup.ps1
-powershell -ExecutionPolicy Bypass -File scripts/build.ps1 -Configuration Release
-```
-
-The setup script downloads the pinned official CEF 154 Windows x64 standard distribution, verifies its SHA-1 hash against the CEF build server's checksum, and extracts it under `third_party/cef`. CEF binaries are not committed to this repository.
-
-The launcher is written to `build/out/VEYRA.exe`; the client DLL is `build/out/VEYRA.dll`. Start VEYRA using the EXE, not the DLL.
-
-## Security and project status
-
-VEYRA uses the CEF bootstrap architecture for Chromium's Windows sandbox. Chromium is a security-critical dependency and must be kept current. The sandbox, downloads, permissions, certificate handling, and update process require further validation before VEYRA can be considered production-ready.
+VEYRA is built with C++20, Win32, Chromium Embedded Framework (CEF), and GDI+.
 
 ## Third-party notices
 
@@ -71,10 +57,10 @@ VEYRA uses Chromium and the Chromium Embedded Framework. Their notices are avail
 
 ## License and project use
 
-VEYRA's original project code is provided under the **PolyForm Strict License 1.0.0**. This is a source-available, noncommercial license, not an open-source license. It permits use for noncommercial purposes, but does not grant permission to distribute the software or make modifications or derivative works. Read the complete terms in [LICENSE](LICENSE).
+VEYRA's original project code is provided under the **PolyForm Strict License 1.0.0**. This is a source-available, noncommercial license, not an open-source license. It does not grant permission to distribute the software or make modified versions. Read the complete terms in [LICENSE](LICENSE).
 
-The repository is public so people can inspect the project. Public visibility does not grant additional copyright permissions. Official VEYRA builds are provided by the project owner. Contact the project owner for any use that is not clearly permitted by the license.
+The repository is public so people can inspect the project. Public visibility does not grant additional copyright permissions. Official VEYRA builds are provided by the project owner.
 
-## Issues and suggestions
+## Bugs and suggestions
 
-Bug reports and feature suggestions are welcome through [GitHub Issues](https://github.com/gamesphereinc-rgb/VEYRA/issues). The PolyForm Strict license does not grant permission to create modified versions or patches. Any contribution that requires modifying the code needs separate, explicit written permission from the project owner before work begins. Pull requests are not automatically authorised contributions.
+Found a bug or have an idea? Open an [issue](https://github.com/gamesphereinc-rgb/VEYRA/issues). The licence does not automatically authorise code modifications or pull-request contributions; please contact the project owner for permission before proposing code changes.
