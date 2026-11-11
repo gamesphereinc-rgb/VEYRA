@@ -70,6 +70,10 @@ set_target_properties(VEYRA PROPERTIES
 
 # The CEF bootstrap launcher provides the Windows sandbox handle to VEYRA.dll.
 if(COMMAND SET_LPAC_ACLS)
+  # CEF's helper expects this variable to be populated by its sample target
+  # setup macros. VEYRA defines its own output directory, so provide the
+  # matching per-configuration directory explicitly.
+  set(CEF_TARGET_OUT_DIR "$<TARGET_FILE_DIR:VEYRA>")
   SET_LPAC_ACLS(VEYRA)
 endif()
 if(COMMAND COPY_FILES)
