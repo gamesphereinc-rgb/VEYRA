@@ -20,6 +20,7 @@
 #include "src/app_state.h"
 #include "src/messages.h"
 #include "src/svg_icons.h"
+#include "src/update_manager.h"
 
 using namespace Gdiplus;
 namespace {
@@ -173,62 +174,176 @@ LRESULT CALLBACK AddressProc(HWND edit,UINT msg,WPARAM wp,LPARAM lp,UINT_PTR id,
   if(msg==WM_NCDESTROY) RemoveWindowSubclass(edit,AddressProc,id);
   return DefSubclassProc(edit,msg,wp,lp);
 }
-void AppendSavedPages(HMENU menu, const std::vector<SavedPage>& pages,
-                      UINT firstId, std::size_t limit) {
-  if (pages.empty()) {
-    AppendMenuW(menu, MF_STRING | MF_GRAYED, 0, L"Nothing here yet");
-    return;
+struct MenuItem {
+  std::wstring label;
+  std::wstring icon;
+  UINT command = 0;
+  bool heading = false;
+};
+constexpr wchar_t kMenuClassName[] = L"VEYRA.CustomMenuPopup";
+constexpr UINT ID_MENU_SETTINGS = 2009;
+std::vector<MenuItem> g_menuItems;
+HWND g_menuWindow = nullptr;
+HWND g_menuOwner = nullptr;
+int g_menuHover = -1;
+
+void BuildMenuItems() {
+  g_menuItems.clear();
+  g_menuItems.push_back({L"BROWSER",L"",0,true});
+  g_menuItems.push_back({L"New tab                              Ctrl+T",L"plus",ID_MENU_NEW_TAB,false});
+  g_menuItems.push_back({L"Bookmark this page              Ctrl+D",L"bookmark",ID_MENU_BOOKMARK_THIS,false});
+  g_menuItems.push_back({L"Downloads",L"download",ID_MENU_OPEN_DOWNLOADS,false});
+  g_menuItems.push_back({L"Settings",L"settings",ID_MENU_SETTINGS,false});
+  g_menuItems.push_back({L"ABOUT",L"",0,true});
+  g_menuItems.push_back({L"About VEYRA",L"info",ID_MENU_ABOUT,false});
+  g_menuItems.push_back({L"Exit VEYRA",L"window-close",ID_MENU_EXIT,false});
+
+  const auto& bookmarks=AppState::Get().Bookmarks();
+  if(!bookmarks.empty()){
+    g_menuItems.push_back({L"BOOKMARKS",L"",0,true});
+    const auto count=std::min<std::size_t>(bookmarks.size(),4);
+    for(std::size_t i=0;i<count;++i){
+      auto label=bookmarks[i].title.empty()?bookmarks[i].url:bookmarks[i].title;
+      if(label.size()>34)label=label.substr(0,31)+L"...";
+      g_menuItems.push_back({label,L"bookmark",ID_MENU_BOOKMARK_BASE+static_cast<UINT>(i),false});
+    }
   }
-  const auto count = std::min(pages.size(), limit);
-  for (std::size_t i = 0; i < count; ++i) {
-    std::wstring label = pages[i].title.empty() ? pages[i].url : pages[i].title;
-    if (label.size() > 72) label.resize(69), label += L"...";
-    AppendMenuW(menu, MF_STRING, firstId + static_cast<UINT>(i), label.c_str());
+  const auto& history=AppState::Get().History();
+  if(!history.empty()){
+    g_menuItems.push_back({L"RECENT HISTORY",L"",0,true});
+    const auto count=std::min<std::size_t>(history.size(),4);
+    for(std::size_t i=0;i<count;++i){
+      auto label=history[i].title.empty()?history[i].url:history[i].title;
+      if(label.size()>34)label=label.substr(0,31)+L"...";
+      g_menuItems.push_back({label,L"history",ID_MENU_HISTORY_BASE+static_cast<UINT>(i),false});
+    }
+    g_menuItems.push_back({L"Clear browsing history",L"trash",ID_MENU_CLEAR_HISTORY,false});
   }
 }
 
-void OpenDownloadsFolder(HWND hwnd) {
-  PWSTR known = nullptr;
-  if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Downloads, 0, nullptr, &known))) {
-    ShellExecuteW(hwnd, L"open", known, nullptr, nullptr, SW_SHOWNORMAL);
-    CoTaskMemFree(known);
-  } else {
-    ShellExecuteW(hwnd, L"open", L"shell:Downloads", nullptr, nullptr, SW_SHOWNORMAL);
+int MenuItemTop(int target) {
+  int y=48;
+  for(int i=0;i<target&&i<static_cast<int>(g_menuItems.size());++i)
+    y+=g_menuItems[static_cast<std::size_t>(i)].heading?25:37;
+  return y;
+}
+int MenuItemAt(int y) {
+  for(int i=0;i<static_cast<int>(g_menuItems.size());++i){
+    const int top=MenuItemTop(i);
+    const int height=g_menuItems[static_cast<std::size_t>(i)].heading?25:37;
+    if(y>=top&&y<top+height)return i;
   }
+  return -1;
+}
+
+void PaintMenu(HWND hwnd,HDC dc) {
+  RECT client{};GetClientRect(hwnd,&client);
+  const int width=client.right,height=client.bottom;
+  Graphics g(dc);g.SetSmoothingMode(SmoothingModeAntiAlias);
+  Round(g,RectF(0.0f,0.0f,(REAL)width,(REAL)height),15.0f,Color(255,13,23,37));
+  Pen outline(Color(255,48,69,88),1.0f);
+  GraphicsPath border;
+  border.AddArc(0.5f,0.5f,29.0f,29.0f,180.0f,90.0f);
+  border.AddArc((REAL)width-30.0f,0.5f,29.0f,29.0f,270.0f,90.0f);
+  border.AddArc((REAL)width-30.0f,(REAL)height-30.0f,29.0f,29.0f,0.0f,90.0f);
+  border.AddArc(0.5f,(REAL)height-30.0f,29.0f,29.0f,90.0f,90.0f);
+  border.CloseFigure();g.DrawPath(&outline,&border);
+
+  VMark(g,17.0f,12.0f);
+  Label(g,L"VEYRA",53.0f,8.0f,105.0f,22.0f,13.0f,Color(255,239,247,255),true);
+  Label(g,L"BROWSE BEYOND",54.0f,28.0f,115.0f,14.0f,7.0f,Color(255,111,140,165),true);
+  SolidBrush separator(Color(255,40,57,75));g.FillRectangle(&separator,14,43,width-28,1);
+
+  for(int i=0;i<static_cast<int>(g_menuItems.size());++i){
+    const auto& item=g_menuItems[static_cast<std::size_t>(i)];
+    const int top=MenuItemTop(i);
+    if(item.heading){
+      Label(g,item.label,20.0f,(REAL)top,static_cast<REAL>(width-40),24.0f,
+            8.0f,Color(255,112,145,165),true);
+      continue;
+    }
+    if(i==g_menuHover)
+      Round(g,RectF(10.0f,(REAL)top+1.0f,(REAL)width-20.0f,34.0f),8.0f,
+            Color(255,30,48,65));
+    SvgIcons::Draw(g,item.icon.c_str(),RectF(20.0f,(REAL)top+10.0f,16.0f,16.0f),
+                   i==g_menuHover?255:190);
+    Label(g,item.label,47.0f,(REAL)top+1.0f,(REAL)width-61.0f,35.0f,10.5f,
+          i==g_menuHover?Color(255,241,248,252):Color(255,190,207,221));
+  }
+}
+
+LRESULT CALLBACK MenuProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
+  switch(msg){
+    case WM_PAINT:{
+      PAINTSTRUCT ps{};HDC dc=BeginPaint(hwnd,&ps);PaintMenu(hwnd,dc);EndPaint(hwnd,&ps);return 0;
+    }
+    case WM_ERASEBKGND:return 1;
+    case WM_MOUSEMOVE:{
+      TRACKMOUSEEVENT tracking{sizeof(tracking),TME_LEAVE,hwnd,0};TrackMouseEvent(&tracking);
+      const int hovered=MenuItemAt(GET_Y_LPARAM(lp));
+      if(hovered!=g_menuHover){g_menuHover=hovered;InvalidateRect(hwnd,nullptr,FALSE);}
+      return 0;
+    }
+    case WM_MOUSELEAVE:
+      if(g_menuHover!=-1){g_menuHover=-1;InvalidateRect(hwnd,nullptr,FALSE);}
+      return 0;
+    case WM_LBUTTONUP:{
+      const int index=MenuItemAt(GET_Y_LPARAM(lp));
+      if(index>=0&&index<static_cast<int>(g_menuItems.size())){
+        const auto command=g_menuItems[static_cast<std::size_t>(index)].command;
+        if(command&&g_menuOwner)PostMessageW(g_menuOwner,WM_VEYRA_MENU_COMMAND,command,0);
+      }
+      DestroyWindow(hwnd);return 0;
+    }
+    case WM_KEYDOWN:
+      if(wp==VK_ESCAPE){DestroyWindow(hwnd);return 0;}
+      break;
+    case WM_ACTIVATE:
+      if(LOWORD(wp)==WA_INACTIVE)DestroyWindow(hwnd);
+      return 0;
+    case WM_NCDESTROY:
+      if(g_menuWindow==hwnd)g_menuWindow=nullptr;
+      g_menuHover=-1;
+      return DefWindowProcW(hwnd,msg,wp,lp);
+  }
+  return DefWindowProcW(hwnd,msg,wp,lp);
+}
+
+bool RegisterMenuClass(HINSTANCE instance) {
+  WNDCLASSEXW wc{};wc.cbSize=sizeof(wc);wc.lpfnWndProc=MenuProc;
+  wc.hInstance=instance;wc.hCursor=LoadCursorW(nullptr,IDC_ARROW);
+  wc.lpszClassName=kMenuClassName;
+  if(RegisterClassExW(&wc))return true;
+  return GetLastError()==ERROR_CLASS_ALREADY_EXISTS;
 }
 
 void ShowMenu(HWND hwnd) {
-  HMENU menu = CreatePopupMenu();
-  if (!menu) return;
-
-  AppendMenuW(menu, MF_STRING, ID_MENU_BOOKMARK_THIS, L"Bookmark this page\tCtrl+D");
-
-  HMENU bookmarks = CreatePopupMenu();
-  AppendSavedPages(bookmarks, AppState::Get().Bookmarks(), ID_MENU_BOOKMARK_BASE, 100);
-  AppendMenuW(menu, MF_POPUP, (UINT_PTR)bookmarks, L"Bookmarks");
-
-  HMENU history = CreatePopupMenu();
-  AppendSavedPages(history, AppState::Get().History(), ID_MENU_HISTORY_BASE, 200);
-  AppendMenuW(history, MF_SEPARATOR, 0, nullptr);
-  AppendMenuW(history, MF_STRING, ID_MENU_CLEAR_HISTORY, L"Clear browsing history");
-  AppendMenuW(menu, MF_POPUP, (UINT_PTR)history, L"History");
-
-  AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-  AppendMenuW(menu, MF_STRING, ID_MENU_OPEN_DOWNLOADS, L"Open downloads folder");
-  AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-  AppendMenuW(menu, MF_STRING, ID_MENU_NEW_TAB, L"New tab\tCtrl+T");
-  AppendMenuW(menu, MF_STRING, ID_MENU_RELOAD, L"Reload page\tCtrl+R");
-  AppendMenuW(menu, MF_STRING, ID_MENU_CLOSE_TAB, L"Close tab\tCtrl+W");
-  AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-  AppendMenuW(menu, MF_STRING, ID_MENU_ABOUT, L"About VEYRA");
-  AppendMenuW(menu, MF_STRING, ID_MENU_EXIT, L"Exit");
-
-  POINT p{};
-  GetCursorPos(&p);
-  SetForegroundWindow(hwnd);
-  TrackPopupMenu(menu, TPM_RIGHTBUTTON | TPM_LEFTALIGN, p.x, p.y, 0, hwnd, nullptr);
-  DestroyMenu(menu);
+  if(g_menuWindow){DestroyWindow(g_menuWindow);return;}
+  BuildMenuItems();
+  int height=48;
+  for(const auto& item:g_menuItems)height+=item.heading?25:37;
+  height+=12;
+  constexpr int width=286;
+  RECT owner{};GetWindowRect(hwnd,&owner);
+  MONITORINFO monitor{sizeof(monitor)};
+  GetMonitorInfoW(MonitorFromWindow(hwnd,MONITOR_DEFAULTTONEAREST),&monitor);
+  int x=owner.right-width-12;
+  int y=owner.top+100;
+  if(y+height>monitor.rcWork.bottom-8)y=monitor.rcWork.bottom-height-8;
+  if(y<monitor.rcWork.top+8)y=monitor.rcWork.top+8;
+  if(x<monitor.rcWork.left+8)x=monitor.rcWork.left+8;
+  if(!RegisterMenuClass(GetModuleHandleW(nullptr)))return;
+  g_menuOwner=hwnd;g_menuHover=-1;
+  g_menuWindow=CreateWindowExW(WS_EX_TOOLWINDOW|WS_EX_TOPMOST,kMenuClassName,L"",
+      WS_POPUP,x,y,width,height,hwnd,nullptr,GetModuleHandleW(nullptr),nullptr);
+  if(!g_menuWindow)return;
+  HRGN region=CreateRoundRectRgn(0,0,width+1,height+1,24,24);
+  if(region)SetWindowRgn(g_menuWindow,region,TRUE);
+  ShowWindow(g_menuWindow,SW_SHOWNORMAL);
+  SetForegroundWindow(g_menuWindow);
+  SetFocus(g_menuWindow);
 }
+
 void Act(HWND hwnd,const Hit& hit) {
   auto& a=AppState::Get();
   switch(hit.action){
@@ -400,6 +515,46 @@ LRESULT CALLBACK Proc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
       if (!AppState::Get().AddBookmark()) MessageBeep(MB_ICONWARNING);
       InvalidateRect(hwnd, nullptr, FALSE);
       return 0;
+    case WM_VEYRA_MENU_COMMAND:{
+      const UINT command=static_cast<UINT>(wp);
+      if(command>=ID_MENU_BOOKMARK_BASE&&command<ID_MENU_BOOKMARK_BASE+4){
+        AppState::Get().OpenBookmark(command-ID_MENU_BOOKMARK_BASE);return 0;
+      }
+      if(command>=ID_MENU_HISTORY_BASE&&command<ID_MENU_HISTORY_BASE+4){
+        AppState::Get().OpenHistory(command-ID_MENU_HISTORY_BASE);return 0;
+      }
+      switch(command){
+        case ID_MENU_NEW_TAB:AppState::Get().CreateTab();return 0;
+        case ID_MENU_BOOKMARK_THIS:
+          if(!AppState::Get().AddBookmark())MessageBeep(MB_ICONWARNING);
+          InvalidateRect(hwnd,nullptr,FALSE);return 0;
+        case ID_MENU_OPEN_DOWNLOADS:OpenDownloadsFolder(hwnd);return 0;
+        case ID_MENU_CLEAR_HISTORY:AppState::Get().ClearHistory();return 0;
+        case ID_MENU_SETTINGS:AppState::Get().CreateTab(AppState::HomeUrl()+L"#settings");return 0;
+        case ID_MENU_ABOUT:
+          MessageBoxW(hwnd,L"VEYRA 0.2.0\nBrowse beyond.\n\nPowered by Chromium Embedded Framework.",
+                      L"About VEYRA",MB_OK|MB_ICONINFORMATION);return 0;
+        case ID_MENU_EXIT:SendMessageW(hwnd,WM_CLOSE,0,0);return 0;
+      }
+      return 0;
+    }
+    case WM_VEYRA_UPDATE_READY:{
+      std::unique_ptr<std::wstring> archive(reinterpret_cast<std::wstring*>(lp));
+      std::wstring error;
+      if(archive&&VeyraUpdater::LaunchInstaller(*archive,GetCurrentProcessId(),error)){
+        AppState::Get().BeginShutdown();
+      }else{
+        MessageBoxW(hwnd,error.empty()?L"Could not prepare the VEYRA update.":error.c_str(),
+                    L"VEYRA updater",MB_OK|MB_ICONERROR);
+      }
+      return 0;
+    }
+    case WM_VEYRA_UPDATE_FAILED:{
+      std::unique_ptr<std::wstring> error(reinterpret_cast<std::wstring*>(lp));
+      MessageBoxW(hwnd,error?error->c_str():L"Update download failed.",
+                  L"VEYRA updater",MB_OK|MB_ICONWARNING);
+      return 0;
+    }
     case WM_VEYRA_CLOSE_READY:DestroyWindow(hwnd);return 0;
     case WM_CLOSE:AppState::Get().BeginShutdown();return 0;
     case WM_DESTROY:
@@ -435,6 +590,7 @@ void LayoutAddressEdit(HWND hwnd) {
 }
 HWND CreateVeyraWindow(HINSTANCE instance,int showCommand) {
   INITCOMMONCONTROLSEX controls{sizeof(controls),ICC_STANDARD_CLASSES};InitCommonControlsEx(&controls);
+  RegisterMenuClass(instance);
   GdiplusStartupInput startup;GdiplusStartup(&g_gdiplusToken,&startup,nullptr);
   WNDCLASSEXW wc{};wc.cbSize=sizeof(wc);wc.style=CS_HREDRAW|CS_VREDRAW;wc.lpfnWndProc=Proc;
   wc.hInstance=instance;wc.hCursor=LoadCursorW(nullptr,IDC_ARROW);wc.hIcon=LoadIconW(nullptr,IDI_APPLICATION);
