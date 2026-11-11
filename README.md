@@ -16,7 +16,7 @@ VEYRA is not an Electron app and does not use Microsoft Edge WebView2. Its Windo
 
 When a build has completed successfully:
 
-1. Open the newest successful **Windows build** run for the VEYRA development branch.
+1. Open the newest successful **Windows build** run on the `main` branch.
 2. Scroll down to the **Artifacts** section.
 3. Download **VEYRA-windows-x64**.
 4. Extract the ZIP to a folder on your PC.
