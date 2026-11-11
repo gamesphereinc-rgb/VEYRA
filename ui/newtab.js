@@ -8,6 +8,92 @@
   const grid = document.getElementById("shortcuts");
   const addButton = document.getElementById("add-shortcut");
   const storageKey = "veyra.custom-shortcuts.v1";
+  const preferencesKey = "veyra.preferences.v1";
+  const settingsView = document.getElementById("settings-view");
+  const settingsButton = document.getElementById("open-settings");
+  const closeSettingsButton = document.getElementById("close-settings");
+  const themeChoice = document.getElementById("theme-choice");
+  const searchEngine = document.getElementById("search-engine");
+  const wallpaperUpload = document.getElementById("wallpaper-upload");
+  const wallpaperGrid = document.getElementById("wallpaper-grid");
+  const resetWallpaper = document.getElementById("reset-wallpaper");
+  const updateButton = document.getElementById("check-updates");
+  const updateStatus = document.getElementById("update-status");
+  const searchEngines = {
+    duckduckgo:"https://duckduckgo.com/?q=", google:"https://www.google.com/search?q=",
+    bing:"https://www.bing.com/search?q=", brave:"https://search.brave.com/search?q="
+  };
+  function readPreferences(){
+    try{const value=JSON.parse(localStorage.getItem(preferencesKey)||"{}");return value&&typeof value==="object"?value:{};}
+    catch(_){return {};}
+  }
+  function savePreferences(patch){
+    const value={...readPreferences(),...patch};
+    try{localStorage.setItem(preferencesKey,JSON.stringify(value));}catch(_){}
+    applyPreferences();return value;
+  }
+  function applyPreferences(){
+    const prefs=readPreferences();
+    let theme=prefs.theme||"dark";
+    if(theme==="system")theme=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";
+    document.body.dataset.theme=theme;
+    const wallpaper=prefs.wallpaper||"default";
+    document.body.dataset.wallpaper=wallpaper;
+    document.body.style.backgroundImage="";
+    if(wallpaper==="custom"&&typeof prefs.customWallpaper==="string"&&prefs.customWallpaper.startsWith("data:image/")){
+      document.body.style.backgroundImage="linear-gradient(180deg,rgba(7,18,24,.32),rgba(7,18,24,.72)),url("+JSON.stringify(prefs.customWallpaper)+")";
+    }
+    if(themeChoice)themeChoice.value=prefs.theme||"dark";
+    if(searchEngine)searchEngine.value=prefs.searchEngine||"duckduckgo";
+    document.querySelectorAll(".wallpaper-option").forEach(button=>button.classList.toggle("active",button.dataset.wallpaper===wallpaper));
+  }
+  function showSettings(show){
+    document.querySelector(".welcome").classList.toggle("hidden",show);
+    settingsView.hidden=!show;
+    document.querySelector(".footer").classList.toggle("hidden",show);
+    settingsButton.setAttribute("aria-expanded",String(show));
+    history.replaceState(null,"",show?"#settings":location.pathname);
+    if(show){applyPreferences();document.querySelector(".page").scrollTo({top:0,behavior:"smooth"});}
+  }
+  settingsButton.addEventListener("click",()=>showSettings(true));
+  closeSettingsButton.addEventListener("click",()=>showSettings(false));
+  themeChoice.addEventListener("change",()=>savePreferences({theme:themeChoice.value}));
+  searchEngine.addEventListener("change",()=>savePreferences({searchEngine:searchEngine.value}));
+  wallpaperGrid.addEventListener("click",event=>{
+    const button=event.target.closest("[data-wallpaper]");
+    if(button)savePreferences({wallpaper:button.dataset.wallpaper});
+  });
+  resetWallpaper.addEventListener("click",()=>savePreferences({wallpaper:"default",customWallpaper:""}));
+  wallpaperUpload.addEventListener("change",()=>{
+    const file=wallpaperUpload.files&&wallpaperUpload.files[0];if(!file)return;
+    if(!/^image\/(png|jpeg|webp)$/i.test(file.type)){window.alert("Choose a PNG, JPG or WebP image.");wallpaperUpload.value="";return;}
+    const reader=new FileReader(),image=new Image();
+    reader.onload=()=>{image.onload=()=>{
+      const scale=Math.min(1,1920/image.width,1080/image.height),canvas=document.createElement("canvas");
+      canvas.width=Math.max(1,Math.round(image.width*scale));canvas.height=Math.max(1,Math.round(image.height*scale));
+      canvas.getContext("2d").drawImage(image,0,0,canvas.width,canvas.height);
+      try{savePreferences({wallpaper:"custom",customWallpaper:canvas.toDataURL("image/jpeg",.82)});}
+      catch(_){window.alert("VEYRA couldn't save that image. Try a smaller image.");}
+    };image.onerror=()=>window.alert("VEYRA couldn't read that image.");image.src=reader.result;};
+    reader.onerror=()=>window.alert("VEYRA couldn't read that file.");reader.readAsDataURL(file);
+  });
+  document.querySelectorAll("[data-settings-nav]").forEach(link=>link.addEventListener("click",()=>{
+    document.querySelectorAll("[data-settings-nav]").forEach(item=>item.classList.remove("active"));link.classList.add("active");
+  }));
+  updateButton.addEventListener("click",async()=>{
+    updateButton.disabled=true;updateButton.textContent="Checking…";updateStatus.textContent="Contacting the official VEYRA release feed…";
+    try{
+      const response=await fetch("https://api.github.com/repos/gamesphereinc-rgb/VEYRA/releases/latest",{headers:{Accept:"application/vnd.github+json"}});
+      if(response.status===404)updateStatus.textContent="No stable release has been published yet. Test builds are available from GitHub Actions.";
+      else if(!response.ok)throw new Error("Release check failed.");
+      else{
+        const release=await response.json();const tag=typeof release.tag_name==="string"?release.tag_name:"New release";
+        updateStatus.textContent="Latest published release: "+tag+". Open the official release page to get it.";
+        updateButton.textContent="View release";updateButton.onclick=()=>window.open(release.html_url,"_blank","noopener");
+      }
+    }catch(_){updateStatus.textContent="Couldn't check for updates. Check your connection or visit the official releases page.";}
+    finally{updateButton.disabled=false;if(updateButton.textContent!=="View release")updateButton.textContent="Check again";}
+  });
 
   const defaults = [
     { name: "DuckDuckGo", url: "https://duckduckgo.com/", detail: "Search privately", icon: "D", style: "icon-search" },
@@ -98,6 +184,12 @@
     custom.forEach((item, index) => grid.append(makeShortcut(item, true, index)));
   }
 
+  document.querySelector(".search").addEventListener("submit",event=>{
+    event.preventDefault();const query=input.value.trim();if(!query)return;
+    const prefs=readPreferences(),base=searchEngines[prefs.searchEngine||"duckduckgo"]||searchEngines.duckduckgo;
+    window.location.href=base+encodeURIComponent(query);
+  });
+
   addButton.addEventListener("click", () => {
     const current = readCustomShortcuts();
     if (current.length >= 6) {
@@ -137,7 +229,12 @@
     }
   });
 
+  applyPreferences();
+  if(location.hash==="#settings")showSettings(true);
+  window.matchMedia("(prefers-color-scheme: light)").addEventListener("change",()=>{
+    if(readPreferences().theme==="system")applyPreferences();
+  });
   updateTime();
-  window.setInterval(updateTime, 15000);
+  window.setInterval(updateTime,15000);
   renderShortcuts();
 })();

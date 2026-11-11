@@ -138,3 +138,60 @@ h1 span { display: block; margin-top: 9px; background: linear-gradient(96deg, #7
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* VEYRA settings and personal wallpaper */
+body[data-theme="light"]{color:#172435;background:#eaf0f5}
+body[data-theme="light"] .page{color:#172435}
+body[data-theme="light"] .brand-name,body[data-theme="light"] h1,body[data-theme="light"] .settings-heading h2{color:#172435}
+body[data-theme="light"] .subheading,body[data-theme="light"] .section-heading p,body[data-theme="light"] .settings-heading p,body[data-theme="light"] .settings-card-heading p,body[data-theme="light"] .setting-note{color:#5e7185}
+body[data-theme="light"] .search,body[data-theme="light"] .shortcut,body[data-theme="light"] .settings-card,body[data-theme="light"] .settings-nav-item,body[data-theme="light"] .settings-select{background:rgba(255,255,255,.88);color:#172435;border-color:rgba(55,78,100,.18)}
+body[data-theme="light"] .search input,body[data-theme="light"] .shortcut-copy strong,body[data-theme="light"] .settings-card h3,body[data-theme="light"] .setting-label{color:#172435}
+body[data-theme="light"] .shortcut-copy small,body[data-theme="light"] .footer{color:#63798e}
+body[data-wallpaper="field"]{background-image:linear-gradient(180deg,rgba(7,18,24,.30),rgba(7,18,24,.74)),url("wallpapers/field.svg");background-size:cover;background-position:center}
+body[data-wallpaper="forest"]{background-image:linear-gradient(180deg,rgba(5,13,16,.34),rgba(5,13,16,.74)),url("wallpapers/forest.svg");background-size:cover;background-position:center}
+body[data-wallpaper="coast"]{background-image:linear-gradient(180deg,rgba(8,20,31,.27),rgba(8,20,31,.70)),url("wallpapers/coast.svg");background-size:cover;background-position:center}
+body[data-wallpaper="custom"]{background-size:cover;background-position:center;background-repeat:no-repeat}
+.settings-button{width:38px;height:38px;display:grid;place-items:center;flex:0 0 auto;margin-left:auto;margin-right:18px;border:1px solid rgba(133,164,190,.18);border-radius:12px;background:rgba(18,31,48,.62);color:#b5c8d8;cursor:pointer}
+.settings-button:hover{color:#86e7d1;border-color:rgba(117,220,203,.48)}
+.settings-button svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.settings-view{width:min(100%,1000px);margin:44px auto 58px;animation:rise .35s ease both}
+.settings-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:30px}
+.settings-heading .eyebrow{margin-bottom:12px}
+.settings-heading h2{margin:0;font-size:clamp(34px,5vw,48px);letter-spacing:-.055em;color:#f3f7fc}
+.settings-heading p{margin:8px 0 0;color:#91a5b9;font-size:14px}
+.settings-back{padding:10px 14px;border:1px solid rgba(133,164,190,.19);border-radius:11px;color:#bdd0df;background:rgba(18,31,48,.72);font:12px "Segoe UI",sans-serif;cursor:pointer}
+.settings-layout{display:grid;grid-template-columns:180px minmax(0,1fr);gap:18px;align-items:start}
+.settings-nav{display:grid;gap:7px;position:sticky;top:20px}
+.settings-nav-item{padding:12px 14px;border-radius:10px;text-decoration:none;color:#93a8bb;font-size:12px;border:1px solid transparent;background:rgba(18,31,48,.35)}
+.settings-nav-item:hover,.settings-nav-item.active{color:#eaf7f4;background:rgba(29,54,67,.78);border-color:rgba(117,220,203,.23)}
+.settings-content{display:grid;gap:15px}
+.settings-card{padding:23px;border:1px solid rgba(133,164,190,.16);border-radius:17px;background:rgba(13,24,38,.83);box-shadow:0 15px 42px rgba(0,0,0,.11);backdrop-filter:blur(16px)}
+.settings-card-heading{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:22px}
+.settings-card h3{margin:0;color:#eaf2f8;font-size:16px;letter-spacing:-.02em}
+.settings-card-heading p{margin:6px 0 0;color:#8298ad;font-size:12px}
+.setting-label{display:block;margin:0 0 9px;color:#bacbd9;font-size:11px;font-weight:700}
+.settings-select{width:min(100%,360px);height:42px;padding:0 12px;border:1px solid rgba(133,164,190,.2);border-radius:10px;color:#eaf2f8;background:#15263a;font:12px "Segoe UI",sans-serif;outline:none}
+.settings-select:focus{border-color:#70dac4;box-shadow:0 0 0 3px rgba(112,218,196,.09)}
+.wallpaper-label{margin-top:22px}
+.wallpaper-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.wallpaper-option{min-width:0;padding:7px;border:1px solid rgba(133,164,190,.17);border-radius:12px;color:#b7c8d7;background:rgba(23,39,57,.7);text-align:left;font:11px "Segoe UI",sans-serif;cursor:pointer}
+.wallpaper-option.active{border-color:#76dfc8;box-shadow:0 0 0 2px rgba(118,223,200,.12);color:#e7f8f3}
+.wallpaper-preview{display:block;height:76px;margin-bottom:8px;border-radius:8px;background-size:cover;background-position:center}
+.wallpaper-default{background:radial-gradient(ellipse at 50% 100%,#21485a,#0c1725 70%)}
+.wallpaper-field{background-image:url("wallpapers/field.svg")}
+.wallpaper-forest{background-image:url("wallpapers/forest.svg")}
+.wallpaper-coast{background-image:url("wallpapers/coast.svg")}
+.wallpaper-upload-row{display:flex;align-items:center;gap:17px;margin-top:16px}
+.upload-wallpaper,.primary-button{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:10px;color:#06201f;background:linear-gradient(125deg,#7de7d0,#91caff);font:650 11px "Segoe UI",sans-serif;cursor:pointer;border:0}
+.text-button,.release-link{color:#83dcca;border:0;background:none;font:11px "Segoe UI",sans-serif;cursor:pointer;text-decoration:none}
+.setting-note{margin:13px 0 0;color:#8298ad;font-size:10px;line-height:1.6}
+.version-chip{padding:7px 9px;border-radius:8px;color:#85dcca;background:rgba(79,183,165,.1);font-size:9px;font-weight:800;letter-spacing:.1em;white-space:nowrap}
+.update-row{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:15px;border:1px solid rgba(133,164,190,.14);border-radius:12px;background:rgba(24,41,60,.48)}
+.update-row strong{color:#dce8f2;font-size:12px}.update-row p{margin:6px 0 0;max-width:380px;color:#8197ab;font-size:11px;line-height:1.5}
+.primary-button:hover{filter:brightness(1.08)}.release-link{display:inline-block;margin-top:13px}.hidden{display:none!important}
+body[data-theme="light"] .settings-card{background:rgba(255,255,255,.9)}
+body[data-theme="light"] .wallpaper-option{color:#31475c;background:rgba(235,242,248,.92)}
+body[data-theme="light"] .settings-back{color:#31475c;background:rgba(255,255,255,.88)}
+body[data-theme="light"] .update-row{background:rgba(233,241,247,.85)}
+@media(max-width:760px){.settings-layout{grid-template-columns:1fr}.settings-nav{grid-template-columns:repeat(3,1fr);position:static}.settings-nav-item{text-align:center;padding:10px 6px}}
+@media(max-width:520px){.settings-heading{align-items:flex-start;flex-direction:column}.wallpaper-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.update-row{align-items:flex-start;flex-direction:column}.settings-button{margin-right:8px}}
