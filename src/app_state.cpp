@@ -61,7 +61,9 @@ void AppState::CreateTab(const std::wstring& requested) {
   if (!window_ || closing_) return;
   RECT bounds = GetBrowserContentRect(window_);
   CefWindowInfo info;
-  info.SetAsChild(window_, bounds);
+  info.SetAsChild(window_, CefRect(bounds.left, bounds.top,
+                                   bounds.right - bounds.left,
+                                   bounds.bottom - bounds.top));
   CefBrowserSettings settings;
   settings.default_font_size = 16;
   settings.default_fixed_font_size = 13;
@@ -162,7 +164,7 @@ void AppState::OnAddressChanged(int id, const std::wstring& url) {
     t->url = url;
     if (id == active_id_ && address_edit_ && GetFocus() != address_edit_) {
       const auto shown = url.find(L"newtab.html") != std::wstring::npos ? L"" : url;
-      SetWindowTextW(address_edit_, shown);
+      SetWindowTextW(address_edit_, shown.c_str());
     }
     InvalidateRect(window_, nullptr, FALSE);
   }

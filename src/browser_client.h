@@ -11,6 +11,8 @@ class BrowserClient final : public CefClient,
                             public CefDisplayHandler,
                             public CefKeyboardHandler {
  public:
+  BrowserClient() = default;
+
   CefRefPtr<CefLifeSpanHandler> GetLifeSpanHandler() override { return this; }
   CefRefPtr<CefLoadHandler> GetLoadHandler() override { return this; }
   CefRefPtr<CefDisplayHandler> GetDisplayHandler() override { return this; }
