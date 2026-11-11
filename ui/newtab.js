@@ -37,11 +37,15 @@
     let theme=prefs.theme||"dark";
     if(theme==="system")theme=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";
     document.body.dataset.theme=theme;
+    document.documentElement.style.colorScheme=theme;
     const wallpaper=prefs.wallpaper||"default";
     document.body.dataset.wallpaper=wallpaper;
     document.body.style.backgroundImage="";
     if(wallpaper==="custom"&&typeof prefs.customWallpaper==="string"&&prefs.customWallpaper.startsWith("data:image/")){
-      document.body.style.backgroundImage="linear-gradient(180deg,rgba(7,18,24,.32),rgba(7,18,24,.72)),url("+JSON.stringify(prefs.customWallpaper)+")";
+      const overlay=theme==="light"
+        ? "linear-gradient(180deg,rgba(245,249,252,.26),rgba(245,249,252,.68))"
+        : "linear-gradient(180deg,rgba(7,18,24,.32),rgba(7,18,24,.72))";
+      document.body.style.backgroundImage=overlay+",url("+JSON.stringify(prefs.customWallpaper)+")";
     }
     if(themeChoice)themeChoice.value=prefs.theme||"dark";
     if(searchEngine)searchEngine.value=prefs.searchEngine||"duckduckgo";
@@ -125,7 +129,6 @@
             updateStatus.textContent="VEYRA "+release.tag_name+" is available. The package will be verified before installation.";
             updateButton.textContent="Download & install";
           }else{
-            updateStatus.textContent="VEYRA "+release.tag_name+" is available, but this release has no verifiable package. Open the release page to review it.";
             updateStatus.textContent="VEYRA "+release.tag_name+" is available, but this release has no verifiable package. Open the release page to review it.";
             releasePage=release.html_url;
             updateButton.textContent="View release";
