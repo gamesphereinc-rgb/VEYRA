@@ -50,6 +50,7 @@ add_library(VEYRA SHARED
   src/app_state.cpp
   src/browser_client.cpp
   src/window.cpp
+  src/svg_icons.cpp
   resources/veyra.rc
 )
 target_include_directories(VEYRA PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" "${CEF_ROOT}")
