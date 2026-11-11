@@ -574,7 +574,7 @@ LRESULT CALLBACK Proc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
     }
     case WM_VEYRA_UPDATE_FAILED:{
       std::unique_ptr<std::wstring> error(reinterpret_cast<std::wstring*>(lp));
-      NotifyUpdateFailed();
+      NotifyUpdateFailed(static_cast<int>(wp));
       MessageBoxW(hwnd,error?error->c_str():L"Update download failed.",
                   L"VEYRA updater",MB_OK|MB_ICONWARNING);
       return 0;
