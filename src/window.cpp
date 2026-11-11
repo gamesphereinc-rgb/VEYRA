@@ -107,7 +107,6 @@ void Paint(HWND hwnd,HDC hdc) {
   }else{
     Pen globe(Color(255,126,154,178),1.3f);g.DrawEllipse(&globe,197,65,14,14);g.DrawLine(&globe,197,72,211,72);
   }
-  Label(g,L"★",(float)right-36,60,27,32,13,Color(255,139,161,184));
   Round(g,RectF((REAL)w-58,58,38,36),11,Color(255,23,36,52));
   Label(g,L"···",(float)w-58,54,38,38,16,Color(255,194,211,227));
   HitAdd(w-58,57,38,38,Action::Menu);
@@ -186,9 +185,10 @@ LRESULT CALLBACK Proc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
     case WM_VEYRA_HOME:AppState::Get().GoHome();return 0;
     case WM_VEYRA_NAVIGATE:{
       if(g_address){
-        int n=GetWindowTextLengthW(g_address);std::wstring text((size_t)n,L'\0');
+        int n=GetWindowTextLengthW(g_address);std::wstring text((size_t)n+1,L'\0');
         if(n>0)GetWindowTextW(g_address,text.data(),n+1);
-        AppState::Get().NavigateActive(text);SetFocus(hwnd);
+        text.resize((size_t)n);
+        AppState::Get().NavigateActive(text);AppState::Get().FocusBrowser();
       }return 0;
     }
     case WM_VEYRA_CLOSE_READY:DestroyWindow(hwnd);return 0;
