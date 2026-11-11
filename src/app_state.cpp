@@ -244,6 +244,17 @@ void AppState::FocusBrowser() {
     tab->browser->GetHost()->SetFocus(true);
   }
 }
+
+void AppState::NotifyTabUpdateFailed(int id) {
+  if (auto* tab = FindTab(id); tab && tab->browser) {
+    auto frame = tab->browser->GetMainFrame();
+    if (frame) {
+      frame->ExecuteJavaScript(
+          L"if (typeof window.VEYRAUpdateFailed === 'function') window.VEYRAUpdateFailed();",
+          frame->GetURL(), 0);
+    }
+  }
+}
 void AppState::BeginShutdown() {
   if (closing_) return;
   closing_ = true;
