@@ -294,7 +294,7 @@ RECT GetBrowserContentRect(HWND hwnd) {
 }
 void LayoutAddressEdit(HWND hwnd) {
   if(!g_address)return;RECT r{};GetClientRect(hwnd,&r);
-  SetWindowPos(g_address,nullptr,218,64,std::max(40,static_cast<int>(r.right)-344),25,
+  SetWindowPos(g_address,nullptr,218,64,std::max(40,static_cast<int>(r.right)-330),25,
                SWP_NOZORDER|SWP_NOACTIVATE);
 }
 HWND CreateVeyraWindow(HINSTANCE instance,int showCommand) {

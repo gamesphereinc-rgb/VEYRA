@@ -1,8 +1,24 @@
 #include "src/browser_client.h"
 #include "src/app_state.h"
 #include "src/messages.h"
+#include <filesystem>
+#include <shlobj.h>
 
-namespace { CefRefPtr<BrowserClient> g_client; }
+namespace {
+CefRefPtr<BrowserClient> g_client;
+
+std::filesystem::path DownloadsDirectory() {
+  PWSTR known = nullptr;
+  if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Downloads, 0, nullptr, &known))) {
+    std::filesystem::path result(known);
+    CoTaskMemFree(known);
+    return result;
+  }
+  wchar_t temp[MAX_PATH]{};
+  GetTempPathW(MAX_PATH, temp);
+  return std::filesystem::path(temp);
+}
+}
 
 CefRefPtr<BrowserClient> GetBrowserClient() {
   if (!g_client) g_client = new BrowserClient();
@@ -78,5 +94,35 @@ bool BrowserClient::OnPreKeyEvent(CefRefPtr<CefBrowser>, const CefKeyEvent& even
   }
   PostMessageW(hwnd, message, 0, 0);
   if (is_keyboard_shortcut) *is_keyboard_shortcut = true;
+  return true;
+}
+
+
+bool BrowserClient::OnBeforeDownload(
+    CefRefPtr<CefBrowser>,
+    CefRefPtr<CefDownloadItem>,
+    const CefString& suggested_name,
+    CefRefPtr<CefBeforeDownloadCallback> callback) {
+  if (!callback) return false;
+
+  const auto directory = DownloadsDirectory();
+  std::error_code ec;
+  std::filesystem::create_directories(directory, ec);
+  if (ec) return false;
+
+  auto filename = std::filesystem::path(suggested_name.ToWString()).filename();
+  if (filename.empty() || filename == std::filesystem::path(L".") ||
+      filename == std::filesystem::path(L"..")) filename = L"download";
+
+  auto destination = directory / filename;
+  const auto stem = filename.stem().wstring();
+  const auto extension = filename.extension().wstring();
+  for (unsigned int suffix = 1; std::filesystem::exists(destination, ec) && suffix < 10000; ++suffix) {
+    destination = directory /
+      (stem + L" (" + std::to_wstring(suffix) + L")" + extension);
+  }
+  if (ec) return false;
+
+  callback->Continue(CefString(destination.wstring()), false);
   return true;
 }
