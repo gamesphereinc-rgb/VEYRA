@@ -1,6 +1,13 @@
 #include "src/window.h"
 #include <windows.h>
 #include <windowsx.h>
+#ifdef GetFirstChild
+#undef GetFirstChild
+#endif
+#ifdef GetNextSibling
+#undef GetNextSibling
+#endif
+#include <objbase.h>
 #include <commctrl.h>
 #include <dwmapi.h>
 #include <gdiplus.h>
@@ -74,8 +81,8 @@ void Paint(HWND hwnd,HDC hdc) {
     RectF r((REAL)x,7,(REAL)(tw-5),34);
     if(selected) Round(g,r,10,Color(255,25,39,57));
     else Round(g,r,10,Color(68,35,51,70));
-    if(t.loading){Pen p(Color(255,111,225,207),2);g.DrawArc(&p,(REAL)x+12,17,13,13,35,245);}
-    else {SolidBrush dot(selected?Color(255,112,231,207):Color(255,91,119,146));g.FillEllipse(&dot,(REAL)x+16,21,6,6);}
+    if(t.loading){Pen p(Color(255,111,225,207),2);g.DrawArc(&p,(REAL)x+12.0f,17.0f,13.0f,13.0f,35.0f,245.0f);}
+    else {SolidBrush dot(selected?Color(255,112,231,207):Color(255,91,119,146));g.FillEllipse(&dot,(REAL)x+16.0f,21.0f,6.0f,6.0f);}
     Label(g,t.title.empty()?L"New tab":t.title,(float)x+34,8,(float)tw-70,32,10,
           selected?Color(255,232,241,250):Color(255,154,174,193));
     Label(g,L"×",(float)x+tw-30,8,24,31,16,Color(255,143,161,180));
@@ -99,8 +106,8 @@ void Paint(HWND hwnd,HDC hdc) {
   const int left=184, right=std::max(left+180,w-76);
   Round(g,RectF((REAL)left,56,(REAL)(right-left),40),13,Color(255,20,31,47));
   Pen border(Color(255,42,61,81),1);
-  GraphicsPath p; p.AddArc((REAL)left,56,26,26,180,90);p.AddArc((REAL)right-26,56,26,26,270,90);
-  p.AddArc((REAL)right-26,70,26,26,0,90);p.AddArc((REAL)left,70,26,26,90,90);p.CloseFigure();g.DrawPath(&border,&p);
+  GraphicsPath p; p.AddArc((REAL)left,56.0f,26.0f,26.0f,180.0f,90.0f);p.AddArc((REAL)right-26.0f,56.0f,26.0f,26.0f,270.0f,90.0f);
+  p.AddArc((REAL)right-26.0f,70.0f,26.0f,26.0f,0.0f,90.0f);p.AddArc((REAL)left,70.0f,26.0f,26.0f,90.0f,90.0f);p.CloseFigure();g.DrawPath(&border,&p);
   if(tab&&tab->url.rfind(L"https://",0)==0){
     Pen lock(Color(255,111,224,204),1.5f);g.DrawArc(&lock,198,65,10,11,180,180);
     Round(g,RectF(197,72,13,10),2,Color(255,111,224,204));
@@ -201,11 +208,12 @@ LRESULT CALLBACK Proc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
 }
 
 RECT GetBrowserContentRect(HWND hwnd) {
-  RECT r{};GetClientRect(hwnd,&r);return RECT{0,kChromeHeight,r.right,std::max(kChromeHeight,r.bottom)};
+  RECT r{};GetClientRect(hwnd,&r);return RECT{0,kChromeHeight,r.right,std::max<LONG>(kChromeHeight,r.bottom)};
 }
 void LayoutAddressEdit(HWND hwnd) {
   if(!g_address)return;RECT r{};GetClientRect(hwnd,&r);
-  MoveWindow(g_address,218,64,std::max(40,r.right-344),25,TRUE);
+  SetWindowPos(g_address,nullptr,218,64,std::max(40,static_cast<int>(r.right)-344),25,
+               SWP_NOZORDER|SWP_NOACTIVATE);
 }
 HWND CreateVeyraWindow(HINSTANCE instance,int showCommand) {
   INITCOMMONCONTROLSEX controls{sizeof(controls),ICC_STANDARD_CLASSES};InitCommonControlsEx(&controls);

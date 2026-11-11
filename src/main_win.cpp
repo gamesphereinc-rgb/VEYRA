@@ -4,6 +4,7 @@
 #include <string>
 #include "include/cef_app.h"
 #include "include/cef_version_info.h"
+#include "include/cef_sandbox_win.h"
 #include "src/app_state.h"
 #include "src/window.h"
 
@@ -32,7 +33,6 @@ int RunMain(HINSTANCE instance, int showCommand, void* sandboxInfo) {
   const int childExit = CefExecuteProcess(args,app,sandboxInfo);
   if(childExit>=0)return childExit;
 
-  CefEnableHighDPISupport();
   CefSettings settings;
   settings.no_sandbox = sandboxInfo == nullptr;
   settings.multi_threaded_message_loop = false;
