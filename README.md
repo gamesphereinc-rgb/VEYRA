@@ -51,11 +51,13 @@ A dedicated downloads manager, extensions, private windows, settings, profile sy
 
 ## Technology
 
-VEYRA is built with C++20, Win32, Chromium Embedded Framework (CEF), and GDI+.
+VEYRA is built with C++20, Win32, Chromium Embedded Framework (CEF), GDI+, and NanoSVG for cached native SVG icon rendering.
 
 ## Third-party notices
 
 VEYRA uses Chromium and the Chromium Embedded Framework. Their notices are available through the CEF distribution and the browser's `about:license` page. See the [CEF project documentation](https://chromiumembedded.github.io/cef/general_usage.html).
+
+VEYRA also includes NanoSVG by Mikko Mononen for SVG icon parsing and rasterization. Its zlib-style license and required copyright notice are retained in `third_party/nanosvg/LICENSE.txt`.
 
 ## License and project use
 
