@@ -3,7 +3,7 @@
 
 namespace Gdiplus {
 class Graphics;
-struct RectF;
+class RectF;
 }
 
 namespace SvgIcons {
