@@ -48,6 +48,12 @@ The Windows CI workflow is included, but this initial code has not yet been comp
 
 VEYRA uses Chromium and the Chromium Embedded Framework. Their notices are available through the CEF distribution and the browser's `about:license` page. See the CEF project documentation: https://chromiumembedded.github.io/cef/general_usage.html
 
-## Contributing
+## License and project use
 
-Please open an issue before starting a large change. Changes to the official `main` branch should be proposed through pull requests.
+VEYRA's original project code is provided under the **PolyForm Strict License 1.0.0**. This is a source-available, noncommercial license, not an open-source license. It permits use for noncommercial purposes, but does not grant permission to distribute the software or make modifications or derivative works. Read the complete terms in [LICENSE](LICENSE).
+
+The repository is public so people can inspect the project. Public visibility does not grant additional copyright permissions. The official VEYRA releases are the supported builds. Contact the project owner for any use that is not clearly permitted by the license.
+
+## Issues and contributions
+
+Bug reports and feature suggestions are welcome through GitHub Issues. The PolyForm Strict license does not grant permission to create modified versions or patches. Any contribution that requires modifying the code needs separate, explicit written permission from the project owner before work begins. Pull requests are not automatically authorised contributions.
