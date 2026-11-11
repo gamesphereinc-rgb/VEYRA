@@ -34,30 +34,30 @@ jobs:
       - name: Set up CMake
         uses: lukka/get-cmake@latest
 
-      - name: Restore verified CEF cache
+      - name: Restore verified minimal CEF cache
         id: cef-cache
         uses: actions/cache/restore@v5
         with:
-          path: third_party/cef/cef_binary_154.0.34+g14c5a08+chromium-154.0.8037.98_windows64
-          key: cef-windows-x64-154.0.34-g14c5a08-chromium-154.0.8037.98
+          path: third_party/cef/cef_binary_154.0.34+g14c5a08+chromium-154.0.8037.98_windows64_minimal
+          key: cef-windows-x64-minimal-154.0.34-g14c5a08-chromium-154.0.8037.98
 
-      - name: Download and verify CEF
+      - name: Download, verify, and extract minimal CEF
         id: cef-setup
         shell: pwsh
         run: ./scripts/setup.ps1 -SkipConfigure
 
       # Save immediately after CEF is ready, even if a later compile step fails.
-      - name: Save verified CEF cache
+      - name: Save verified minimal CEF cache
         if: steps.cef-setup.outcome == 'success' && steps.cef-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v5
         with:
-          path: third_party/cef/cef_binary_154.0.34+g14c5a08+chromium-154.0.8037.98_windows64
-          key: cef-windows-x64-154.0.34-g14c5a08-chromium-154.0.8037.98
+          path: third_party/cef/cef_binary_154.0.34+g14c5a08+chromium-154.0.8037.98_windows64_minimal
+          key: cef-windows-x64-minimal-154.0.34-g14c5a08-chromium-154.0.8037.98
 
       - name: Configure
         shell: pwsh
         run: |
-          $cef = (Resolve-Path "third_party/cef/cef_binary_154.0.34+g14c5a08+chromium-154.0.8037.98_windows64").Path
+          $cef = (Resolve-Path "third_party/cef/cef_binary_154.0.34+g14c5a08+chromium-154.0.8037.98_windows64_minimal").Path
           cmake -S . -B build -G "Visual Studio 17" -A x64 "-DCEF_ROOT=$cef"
 
       - name: Build VEYRA
