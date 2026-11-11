@@ -23,7 +23,10 @@ using namespace Gdiplus;
 namespace {
 constexpr wchar_t kClassName[] = L"VEYRA.NativeBrowserWindow";
 constexpr int kChromeHeight = 108;
-enum class Action { Back, Forward, Reload, Home, NewTab, ActivateTab, CloseTab, Bookmark, Menu };
+enum class Action {
+  Back, Forward, Reload, Home, NewTab, ActivateTab, CloseTab, Bookmark, Menu,
+  MinimizeWindow, ToggleMaximizeWindow, CloseWindow
+};
 constexpr UINT ID_MENU_BOOKMARK_THIS = 2006;
 constexpr UINT ID_MENU_OPEN_DOWNLOADS = 2007;
 constexpr UINT ID_MENU_CLEAR_HISTORY = 2008;
@@ -35,6 +38,7 @@ HWND g_address = nullptr;
 HBRUSH g_editBrush = nullptr;
 HFONT g_editFont = nullptr;
 ULONG_PTR g_gdiplusToken = 0;
+int g_hoveredWindowControl = -1;
 
 RECT MakeRect(int x,int y,int w,int h){return RECT{x,y,x+w,y+h};}
 bool Contains(const RECT& r, POINT p){return p.x>=r.left&&p.x<r.right&&p.y>=r.top&&p.y<r.bottom;}
@@ -65,6 +69,38 @@ void Button(Graphics& g,int x,int y,const wchar_t* glyph,bool enabled) {
   Label(g,glyph,(float)x,(float)y-1.0f,36.0f,36.0f,19.0f,
         enabled?Color(255,220,234,246):Color(255,91,111,132));
 }
+void WindowControl(Graphics& g, int x, int control, bool maximized) {
+  const bool hovered = g_hoveredWindowControl == control;
+  if (hovered) {
+    const Color bg = control == 2 ? Color(255, 190, 55, 66) : Color(255, 35, 51, 70);
+    SolidBrush fill(bg);
+    g.FillRectangle(&fill, x, 0, 46, 44);
+  }
+
+  Pen icon(Color(255, hovered ? 245 : 189, hovered ? 249 : 208,
+                 hovered ? 252 : 224), 1.35f);
+  icon.SetStartCap(LineCapRound);
+  icon.SetEndCap(LineCapRound);
+
+  if (control == 0) {
+    g.DrawLine(&icon, x + 17, 22, x + 29, 22);
+    HitAdd(x, 0, 46, 44, Action::MinimizeWindow);
+  } else if (control == 1) {
+    if (maximized) {
+      g.DrawRectangle(&icon, x + 17, 12, 11, 10);
+      g.DrawLine(&icon, x + 15, 15, x + 15, 25);
+      g.DrawLine(&icon, x + 15, 25, x + 25, 25);
+    } else {
+      g.DrawRectangle(&icon, x + 17, 13, 12, 11);
+    }
+    HitAdd(x, 0, 46, 44, Action::ToggleMaximizeWindow);
+  } else {
+    g.DrawLine(&icon, x + 17, 14, x + 29, 26);
+    g.DrawLine(&icon, x + 29, 14, x + 17, 26);
+    HitAdd(x, 0, 46, 44, Action::CloseWindow);
+  }
+}
+
 void Paint(HWND hwnd,HDC hdc) {
   RECT cr{}; GetClientRect(hwnd,&cr); const int w=cr.right;
   Graphics g(hdc); g.SetSmoothingMode(SmoothingModeAntiAlias); g.SetTextRenderingHint(TextRenderingHintClearTypeGridFit);
@@ -78,7 +114,7 @@ void Paint(HWND hwnd,HDC hdc) {
 
   g_hits.clear();
   const auto& tabs=AppState::Get().Tabs();
-  const int available=std::max(150,w-380);
+  const int available=std::max(150,w-520);
   const int count=std::max(1,std::min(7,available/146));
   const int start=std::max(0,(int)tabs.size()-count);
   const int visible=(int)tabs.size()-start;
@@ -130,6 +166,11 @@ void Paint(HWND hwnd,HDC hdc) {
   Round(g,RectF((REAL)w-58.0f,58.0f,38.0f,36.0f),11.0f,Color(255,23,36,52));
   Label(g,L"···",(float)w-58,54,38,38,16,Color(255,194,211,227));
   HitAdd(w-58,57,38,38,Action::Menu);
+
+  // VEYRA's own frameless window controls. No stock Windows caption buttons.
+  WindowControl(g, w - 138, 0, IsZoomed(hwnd) != FALSE);
+  WindowControl(g, w - 92, 1, IsZoomed(hwnd) != FALSE);
+  WindowControl(g, w - 46, 2, IsZoomed(hwnd) != FALSE);
 }
 LRESULT CALLBACK AddressProc(HWND edit,UINT msg,WPARAM wp,LPARAM lp,UINT_PTR id,DWORD_PTR) {
   if(msg==WM_KEYDOWN&&wp==VK_RETURN){SendMessageW(GetParent(edit),WM_VEYRA_NAVIGATE,0,0);return 0;}
@@ -207,11 +248,48 @@ void Act(HWND hwnd,const Hit& hit) {
     case Action::Home:a.GoHome();break; case Action::NewTab:a.CreateTab();break;
     case Action::ActivateTab:a.ActivateTab(hit.tabId);break; case Action::CloseTab:a.CloseTab(hit.tabId);break;
     case Action::Bookmark:if(!a.AddBookmark()) MessageBeep(MB_ICONWARNING);break;
+    case Action::MinimizeWindow:ShowWindow(hwnd, SW_MINIMIZE);break;
+    case Action::ToggleMaximizeWindow:
+      ShowWindow(hwnd, IsZoomed(hwnd) ? SW_RESTORE : SW_MAXIMIZE);
+      break;
+    case Action::CloseWindow:SendMessageW(hwnd, WM_CLOSE, 0, 0);break;
     case Action::Menu:ShowMenu(hwnd);break;
   }
 }
 LRESULT CALLBACK Proc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
   switch(msg){
+    case WM_NCCALCSIZE:
+      // Use the full client area for VEYRA's custom title bar and resize frame.
+      if (wp) return 0;
+      break;
+    case WM_NCHITTEST: {
+      POINT screen{GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};
+      RECT frame{};
+      GetWindowRect(hwnd, &frame);
+      if (!IsZoomed(hwnd)) {
+        constexpr int border = 8;
+        const bool left = screen.x < frame.left + border;
+        const bool right = screen.x >= frame.right - border;
+        const bool top = screen.y < frame.top + border;
+        const bool bottom = screen.y >= frame.bottom - border;
+        if (top && left) return HTTOPLEFT;
+        if (top && right) return HTTOPRIGHT;
+        if (bottom && left) return HTBOTTOMLEFT;
+        if (bottom && right) return HTBOTTOMRIGHT;
+        if (left) return HTLEFT;
+        if (right) return HTRIGHT;
+        if (top) return HTTOP;
+        if (bottom) return HTBOTTOM;
+      }
+
+      POINT client = screen;
+      ScreenToClient(hwnd, &client);
+      for (auto it = g_hits.rbegin(); it != g_hits.rend(); ++it) {
+        if (Contains(it->rect, client)) return HTCLIENT;
+      }
+      if (client.y >= 0 && client.y < 44) return HTCAPTION;
+      return HTCLIENT;
+    }
     case WM_CREATE:{
       g_editBrush=CreateSolidBrush(RGB(20,31,47));
       g_editFont=CreateFontW(-15,0,0,0,FW_NORMAL,FALSE,FALSE,FALSE,DEFAULT_CHARSET,
@@ -226,6 +304,36 @@ LRESULT CALLBACK Proc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
       LayoutAddressEdit(hwnd);return 0;
     }
     case WM_SIZE:LayoutAddressEdit(hwnd);AppState::Get().ResizeTabs();InvalidateRect(hwnd,nullptr,FALSE);return 0;
+    case WM_MOUSEMOVE: {
+      TRACKMOUSEEVENT tracking{sizeof(tracking), TME_LEAVE, hwnd, 0};
+      TrackMouseEvent(&tracking);
+      POINT point{GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};
+      int hovered = -1;
+      for (auto it = g_hits.rbegin(); it != g_hits.rend(); ++it) {
+        if (!Contains(it->rect, point)) continue;
+        if (it->action == Action::MinimizeWindow) hovered = 0;
+        else if (it->action == Action::ToggleMaximizeWindow) hovered = 1;
+        else if (it->action == Action::CloseWindow) hovered = 2;
+        break;
+      }
+      if (hovered != g_hoveredWindowControl) {
+        g_hoveredWindowControl = hovered;
+        RECT top{0, 0, 0, 44};
+        GetClientRect(hwnd, &top);
+        top.bottom = 44;
+        InvalidateRect(hwnd, &top, FALSE);
+      }
+      return 0;
+    }
+    case WM_MOUSELEAVE:
+      if (g_hoveredWindowControl != -1) {
+        g_hoveredWindowControl = -1;
+        RECT top{};
+        GetClientRect(hwnd, &top);
+        top.bottom = 44;
+        InvalidateRect(hwnd, &top, FALSE);
+      }
+      return 0;
     case WM_PAINT:{PAINTSTRUCT ps{};HDC dc=BeginPaint(hwnd,&ps);Paint(hwnd,dc);EndPaint(hwnd,&ps);return 0;}
     case WM_ERASEBKGND:return 1;
     case WM_CTLCOLOREDIT:SetTextColor((HDC)wp,RGB(231,241,250));SetBkColor((HDC)wp,RGB(20,31,47));return (LRESULT)g_editBrush;
@@ -283,7 +391,19 @@ LRESULT CALLBACK Proc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
     case WM_VEYRA_CLOSE_READY:DestroyWindow(hwnd);return 0;
     case WM_CLOSE:AppState::Get().BeginShutdown();return 0;
     case WM_DESTROY:PostQuitMessage(0);return 0;
-    case WM_GETMINMAXINFO:{auto* m=(MINMAXINFO*)lp;m->ptMinTrackSize.x=760;m->ptMinTrackSize.y=520;return 0;}
+    case WM_GETMINMAXINFO: {
+      auto* m = reinterpret_cast<MINMAXINFO*>(lp);
+      m->ptMinTrackSize.x = 760;
+      m->ptMinTrackSize.y = 520;
+      MONITORINFO monitor{sizeof(monitor)};
+      if (GetMonitorInfoW(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST), &monitor)) {
+        m->ptMaxPosition.x = monitor.rcWork.left - monitor.rcMonitor.left;
+        m->ptMaxPosition.y = monitor.rcWork.top - monitor.rcMonitor.top;
+        m->ptMaxSize.x = monitor.rcWork.right - monitor.rcWork.left;
+        m->ptMaxSize.y = monitor.rcWork.bottom - monitor.rcWork.top;
+      }
+      return 0;
+    }
   }
   return DefWindowProcW(hwnd,msg,wp,lp);
 }
@@ -304,8 +424,10 @@ HWND CreateVeyraWindow(HINSTANCE instance,int showCommand) {
   wc.hInstance=instance;wc.hCursor=LoadCursorW(nullptr,IDC_ARROW);wc.hIcon=LoadIconW(nullptr,IDI_APPLICATION);
   wc.hIconSm=wc.hIcon;wc.lpszClassName=kClassName;
   if(!RegisterClassExW(&wc)&&GetLastError()!=ERROR_CLASS_ALREADY_EXISTS)return nullptr;
+  const DWORD windowStyle = WS_POPUP | WS_THICKFRAME | WS_MINIMIZEBOX |
+                            WS_MAXIMIZEBOX | WS_SYSMENU;
   HWND hwnd=CreateWindowExW(WS_EX_APPWINDOW,kClassName,L"VEYRA — Browse beyond",
-    WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,CW_USEDEFAULT,1280,820,nullptr,nullptr,instance,nullptr);
+    windowStyle,CW_USEDEFAULT,CW_USEDEFAULT,1280,820,nullptr,nullptr,instance,nullptr);
   if(!hwnd)return nullptr;
   const BOOL dark=TRUE;DwmSetWindowAttribute(hwnd,20,&dark,sizeof(dark));
   const int corners=2;DwmSetWindowAttribute(hwnd,33,&corners,sizeof(corners));
