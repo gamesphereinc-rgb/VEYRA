@@ -95,6 +95,17 @@ void WindowControl(Graphics& g, int x, int control, bool maximized) {
   }
 }
 
+void NotifyUpdateFailed() {
+  const auto* tab = AppState::Get().ActiveTab();
+  if (!tab || !tab->browser) return;
+  auto frame = tab->browser->GetMainFrame();
+  if (frame) {
+    frame->ExecuteJavaScript(
+        L"if (typeof window.VEYRAUpdateFailed === 'function') window.VEYRAUpdateFailed();",
+        frame->GetURL(), 0);
+  }
+}
+
 void OpenDownloadsFolder(HWND owner) {
   PWSTR downloads = nullptr;
   const HRESULT result = SHGetKnownFolderPath(FOLDERID_Downloads, 0, nullptr, &downloads);
@@ -562,6 +573,7 @@ LRESULT CALLBACK Proc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
       if(archive&&VeyraUpdater::LaunchInstaller(*archive,GetCurrentProcessId(),error)){
         AppState::Get().BeginShutdown();
       }else{
+        NotifyUpdateFailed();
         MessageBoxW(hwnd,error.empty()?L"Could not prepare the VEYRA update.":error.c_str(),
                     L"VEYRA updater",MB_OK|MB_ICONERROR);
       }
@@ -569,6 +581,7 @@ LRESULT CALLBACK Proc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
     }
     case WM_VEYRA_UPDATE_FAILED:{
       std::unique_ptr<std::wstring> error(reinterpret_cast<std::wstring*>(lp));
+      NotifyUpdateFailed();
       MessageBoxW(hwnd,error?error->c_str():L"Update download failed.",
                   L"VEYRA updater",MB_OK|MB_ICONWARNING);
       return 0;
