@@ -1,28 +1,49 @@
 name: Windows build
+
 on:
   push:
     branches: [main, "build/**"]
   pull_request:
     branches: [main]
   workflow_dispatch:
+
+# Keep only the newest build for this branch/PR so a rapid series of commits
+# does not launch several 350 MB CEF downloads at once.
+concurrency:
+  group: veyra-windows-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
+
 jobs:
   build:
     runs-on: windows-2022
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
-        name: Check out source
-      - uses: lukka/get-cmake@latest
-        name: Set up CMake
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up CMake
+        uses: lukka/get-cmake@latest
+
       - name: Download and verify CEF
         shell: pwsh
         run: ./scripts/setup.ps1 -SkipConfigure
+
       - name: Configure
         shell: pwsh
         run: |
           $cef = (Resolve-Path "third_party/cef/cef_binary_154.0.34+g14c5a08+chromium-154.0.8037.98_windows64").Path
           cmake -S . -B build -G "Visual Studio 17" -A x64 "-DCEF_ROOT=$cef"
-      - name: Build
+
+      - name: Build VEYRA
         run: cmake --build build --config Release --target VEYRA --parallel
+
+      - name: Upload VEYRA Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: VEYRA-windows-x64
+          path: build/out/
+          if-no-files-found: error
+          retention-days: 14
