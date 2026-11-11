@@ -9,6 +9,27 @@ CefRefPtr<BrowserClient> GetBrowserClient() {
   return g_client;
 }
 
+bool BrowserClient::OnBeforePopup(CefRefPtr<CefBrowser>,
+                                  CefRefPtr<CefFrame>,
+                                  int,
+                                  const CefString& target_url,
+                                  const CefString&,
+                                  WindowOpenDisposition,
+                                  bool,
+                                  const CefPopupFeatures&,
+                                  CefWindowInfo&,
+                                  CefRefPtr<CefClient>&,
+                                  CefBrowserSettings&,
+                                  CefRefPtr<CefDictionaryValue>&,
+                                  bool*) {
+  // Route target=_blank, window.open and other popup requests into a normal
+  // VEYRA tab instead of creating an unmanaged Chromium window.
+  if (!target_url.empty()) {
+    AppState::Get().CreateTab(target_url.ToWString());
+  }
+  return true;
+}
+
 void BrowserClient::OnAfterCreated(CefRefPtr<CefBrowser> browser) {
   AppState::Get().OnBrowserCreated(browser);
 }
