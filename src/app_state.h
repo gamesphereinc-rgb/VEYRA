@@ -31,6 +31,7 @@ class AppState final {
   void Stop();
   void GoHome();
   void FocusAddress();
+  void FocusBrowser();
   void BeginShutdown();
   void ResizeTabs();
   void OnBrowserCreated(CefRefPtr<CefBrowser> browser);
