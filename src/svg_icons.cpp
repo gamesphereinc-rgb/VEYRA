@@ -61,13 +61,13 @@ std::unique_ptr<Gdiplus::Bitmap> LoadIcon(const std::wstring& name) {
   nsvgDelete(image);
 
   auto bitmap = std::make_unique<Gdiplus::Bitmap>(
-      kRasterSize, kRasterSize, Gdiplus::Gdiplus::PixelFormat32bppARGB);
+      kRasterSize, kRasterSize, Gdiplus::PixelFormat32bppARGB);
   if (bitmap->GetLastStatus() != Gdiplus::Ok) return nullptr;
 
   Gdiplus::Rect bounds(0, 0, kRasterSize, kRasterSize);
   Gdiplus::BitmapData locked{};
   if (bitmap->LockBits(&bounds, Gdiplus::ImageLockModeWrite,
-                       Gdiplus::Gdiplus::PixelFormat32bppARGB, &locked) != Gdiplus::Ok) {
+                       Gdiplus::PixelFormat32bppARGB, &locked) != Gdiplus::Ok) {
     return nullptr;
   }
   for (int y = 0; y < kRasterSize; ++y) {
