@@ -95,15 +95,8 @@ void WindowControl(Graphics& g, int x, int control, bool maximized) {
   }
 }
 
-void NotifyUpdateFailed() {
-  const auto* tab = AppState::Get().ActiveTab();
-  if (!tab || !tab->browser) return;
-  auto frame = tab->browser->GetMainFrame();
-  if (frame) {
-    frame->ExecuteJavaScript(
-        L"if (typeof window.VEYRAUpdateFailed === 'function') window.VEYRAUpdateFailed();",
-        frame->GetURL(), 0);
-  }
+void NotifyUpdateFailed(int browserId) {
+  AppState::Get().NotifyTabUpdateFailed(browserId);
 }
 
 void OpenDownloadsFolder(HWND owner) {
@@ -573,7 +566,7 @@ LRESULT CALLBACK Proc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
       if(archive&&VeyraUpdater::LaunchInstaller(*archive,GetCurrentProcessId(),error)){
         AppState::Get().BeginShutdown();
       }else{
-        NotifyUpdateFailed();
+        NotifyUpdateFailed(static_cast<int>(wp));
         MessageBoxW(hwnd,error.empty()?L"Could not prepare the VEYRA update.":error.c_str(),
                     L"VEYRA updater",MB_OK|MB_ICONERROR);
       }
