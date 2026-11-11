@@ -8,14 +8,22 @@ endif()
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
 
 set(CEF_VERSION "154.0.34+g14c5a08+chromium-154.0.8037.98" CACHE STRING "Pinned stable CEF release")
 if(NOT DEFINED CEF_ROOT)
-  set(CEF_ROOT "${CMAKE_SOURCE_DIR}/third_party/cef/cef_binary_${CEF_VERSION}_windows64" CACHE PATH "Extracted CEF distribution")
+  set(CEF_ROOT "${CMAKE_SOURCE_DIR}/third_party/cef/cef_binary_${CEF_VERSION}_windows64_minimal" CACHE PATH "Extracted minimal CEF distribution")
 endif()
 if(NOT EXISTS "${CEF_ROOT}/cmake/FindCEF.cmake")
   message(FATAL_ERROR "CEF not found. Run powershell -ExecutionPolicy Bypass -File scripts/setup.ps1")
+endif()
+
+# The minimal CEF package contains Release binaries only. Keep Debug available
+# when a full CEF distribution is explicitly supplied by a developer.
+if(EXISTS "${CEF_ROOT}/Debug/libcef.lib")
+  set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
+else()
+  set(CMAKE_CONFIGURATION_TYPES "Release" CACHE STRING "" FORCE)
+  message(STATUS "Minimal CEF distribution detected; VEYRA is configured for Release only.")
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CEF_ROOT}/cmake")

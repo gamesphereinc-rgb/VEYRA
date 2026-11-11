@@ -5,7 +5,7 @@ $ProgressPreference = "SilentlyContinue"
 
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $Version = "154.0.34+g14c5a08+chromium-154.0.8037.98"
-$Platform = "windows64"
+$Platform = "windows64_minimal"
 $Archive = "cef_binary_$($Version)_$($Platform).tar.bz2"
 $Folder = "cef_binary_$($Version)_$($Platform)"
 $ThirdParty = Join-Path $Root "third_party\cef"
@@ -58,6 +58,65 @@ function Invoke-Download {
     Move-Item -Path $PartialPath -Destination $Destination -Force
 }
 
+function Find-SevenZip {
+    $Command = Get-Command "7z.exe" -ErrorAction SilentlyContinue
+    if ($Command -and $Command.Source) {
+        return $Command.Source
+    }
+
+    if ($env:ProgramFiles) {
+        $Candidate = Join-Path $env:ProgramFiles "7-Zip\7z.exe"
+        if (Test-Path $Candidate) {
+            return $Candidate
+        }
+    }
+
+    return $null
+}
+
+function Expand-CefArchive {
+    param(
+        [Parameter(Mandatory = $true)][string]$ArchiveFile,
+        [Parameter(Mandatory = $true)][string]$Destination
+    )
+
+    $Timer = [System.Diagnostics.Stopwatch]::StartNew()
+    $SevenZip = Find-SevenZip
+
+    if ($SevenZip) {
+        Write-Host "Using 7-Zip for streamed BZip2/TAR extraction: $SevenZip" -ForegroundColor Cyan
+
+        # Stream the decompressed TAR directly into 7-Zip. This avoids writing
+        # a huge intermediate .tar file and exposes extraction progress.
+        $CommandFile = Join-Path $env:TEMP "veyra-cef-extract-$PID.cmd"
+        $Pipeline = '"' + $SevenZip + '" x -so "' + $ArchiveFile + '" -bsp0 | "' +
+            $SevenZip + '" x -si -ttar -o"' + $Destination + '" -y'
+        $CommandText = "@echo off" + [Environment]::NewLine + $Pipeline +
+            [Environment]::NewLine + "exit /b %ERRORLEVEL%" + [Environment]::NewLine
+
+        try {
+            [System.IO.File]::WriteAllText($CommandFile, $CommandText, [System.Text.Encoding]::ASCII)
+            & $env:ComSpec /d /c ('"{0}"' -f $CommandFile)
+            $ExtractExitCode = $LASTEXITCODE
+        }
+        finally {
+            Remove-Item $CommandFile -Force -ErrorAction SilentlyContinue
+        }
+    }
+    else {
+        Write-Warning "7-Zip was not found. Falling back to Windows tar.exe; extraction may be slower."
+        & tar.exe -xjf $ArchiveFile -C $Destination
+        $ExtractExitCode = $LASTEXITCODE
+    }
+
+    $Timer.Stop()
+    Write-Host "CEF extraction process finished in $($Timer.Elapsed.ToString())." -ForegroundColor Cyan
+
+    if ($ExtractExitCode -ne 0) {
+        throw "CEF extraction failed with exit code $ExtractExitCode."
+    }
+}
+
 if (-not (Get-Command cmake -ErrorAction SilentlyContinue)) {
     throw "CMake 3.24 or newer is required."
 }
@@ -65,6 +124,12 @@ if (-not (Get-Command cmake -ErrorAction SilentlyContinue)) {
 New-Item -ItemType Directory -Force -Path $ThirdParty | Out-Null
 
 $FindCefFile = Join-Path $CefRoot "cmake\FindCEF.cmake"
+$RequiredFiles = @(
+    $FindCefFile,
+    (Join-Path $CefRoot "Release\libcef.lib"),
+    (Join-Path $CefRoot "Release\bootstrap.exe")
+)
+
 if (-not (Test-Path $FindCefFile)) {
     # Remove an incomplete extraction before attempting a clean extraction.
     if (Test-Path $CefRoot) {
@@ -80,11 +145,11 @@ if (-not (Test-Path $FindCefFile)) {
     }
 
     if (-not (Test-Path $ArchivePath)) {
-        Write-Host "CEF cache miss: downloading the official Windows x64 distribution (about 350 MB)." -ForegroundColor Yellow
+        Write-Host "CEF minimal cache miss: downloading the official Windows x64 distribution (about 165 MB)." -ForegroundColor Yellow
         Invoke-Download -Url $BaseUrl -Destination $ArchivePath
     }
     else {
-        Write-Host "CEF archive already exists; reusing it."
+        Write-Host "CEF minimal archive already exists; reusing it."
     }
 
     $HashText = Get-Content $HashPath -Raw
@@ -101,22 +166,27 @@ if (-not (Test-Path $FindCefFile)) {
         throw "CEF SHA-1 verification failed. The downloaded archive was removed."
     }
 
-    Write-Host "CEF checksum verified. Extracting the distribution..." -ForegroundColor Green
-    & tar.exe -xjf $ArchivePath -C $ThirdParty
-    $TarExitCode = $LASTEXITCODE
-    if ($TarExitCode -ne 0) {
-        Remove-Item $CefRoot -Recurse -Force -ErrorAction SilentlyContinue
-        throw "CEF extraction failed with tar exit code $TarExitCode."
+    Write-Host "CEF SHA-1 checksum verified. Beginning minimal distribution extraction..." -ForegroundColor Green
+    try {
+        Expand-CefArchive -ArchiveFile $ArchivePath -Destination $ThirdParty
+    }
+    catch {
+        if (Test-Path $CefRoot) {
+            Remove-Item $CefRoot -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        throw
     }
 
     Remove-Item $ArchivePath, $HashPath -Force -ErrorAction SilentlyContinue
 }
 
-if (-not (Test-Path $FindCefFile)) {
-    throw "CEF folder not found or incomplete after extraction: $CefRoot"
+foreach ($RequiredFile in $RequiredFiles) {
+    if (-not (Test-Path $RequiredFile)) {
+        throw "CEF minimal distribution is incomplete. Required file not found: $RequiredFile"
+    }
 }
 
-Write-Host "CEF runtime ready: $CefRoot" -ForegroundColor Green
+Write-Host "CEF minimal runtime ready: $CefRoot" -ForegroundColor Green
 
 if (-not $SkipConfigure) {
     Write-Host "Configuring Visual Studio 2022 x64..." -ForegroundColor Yellow
