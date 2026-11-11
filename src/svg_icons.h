@@ -1,7 +1,10 @@
 #pragma once
 #include <windows.h>
-#include <wingdi.h>
-#include <gdiplus.h>
+
+namespace Gdiplus {
+class Graphics;
+struct RectF;
+}
 
 namespace SvgIcons {
 bool Draw(Gdiplus::Graphics& graphics, const wchar_t* name,
