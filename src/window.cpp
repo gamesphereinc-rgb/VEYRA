@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include <memory>
 #include "src/app_state.h"
 #include "src/messages.h"
 #include "src/svg_icons.h"

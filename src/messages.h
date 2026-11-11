@@ -19,3 +19,6 @@ constexpr int ID_MENU_ABOUT = 2004;
 constexpr int ID_MENU_EXIT = 2005;
 
 constexpr UINT WM_VEYRA_BOOKMARK = WM_APP + 19;
+
+constexpr UINT WM_VEYRA_UPDATE_READY = WM_APP + 20;
+constexpr UINT WM_VEYRA_UPDATE_FAILED = WM_APP + 21;

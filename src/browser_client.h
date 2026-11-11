@@ -3,6 +3,7 @@
 #include "include/cef_display_handler.h"
 #include "include/cef_download_handler.h"
 #include "include/cef_keyboard_handler.h"
+#include "include/cef_request_handler.h"
 #include "include/cef_life_span_handler.h"
 #include "include/cef_load_handler.h"
 
@@ -11,7 +12,8 @@ class BrowserClient final : public CefClient,
                             public CefLoadHandler,
                             public CefDisplayHandler,
                             public CefKeyboardHandler,
-                            public CefDownloadHandler {
+                            public CefDownloadHandler,
+                            public CefRequestHandler {
  public:
   BrowserClient() = default;
 
@@ -20,7 +22,11 @@ class BrowserClient final : public CefClient,
   CefRefPtr<CefDisplayHandler> GetDisplayHandler() override { return this; }
   CefRefPtr<CefKeyboardHandler> GetKeyboardHandler() override { return this; }
   CefRefPtr<CefDownloadHandler> GetDownloadHandler() override { return this; }
+  CefRefPtr<CefRequestHandler> GetRequestHandler() override { return this; }
 
+  bool OnBeforeBrowse(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
+                      CefRefPtr<CefRequest> request, bool user_gesture,
+                      bool is_redirect) override;
   bool OnBeforePopup(CefRefPtr<CefBrowser> browser,
                      CefRefPtr<CefFrame> frame,
                      int popup_id,

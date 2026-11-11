@@ -1,6 +1,7 @@
 #include "src/browser_client.h"
 #include "src/app_state.h"
 #include "src/messages.h"
+#include "src/update_manager.h"
 #include <filesystem>
 #include <shlobj.h>
 
@@ -23,6 +24,50 @@ std::filesystem::path DownloadsDirectory() {
 CefRefPtr<BrowserClient> GetBrowserClient() {
   if (!g_client) g_client = new BrowserClient();
   return g_client;
+}
+
+namespace {
+int HexValue(wchar_t c) {
+  if(c>=L'0'&&c<=L'9')return c-L'0';
+  if(c>=L'a'&&c<=L'f')return c-L'a'+10;
+  if(c>=L'A'&&c<=L'F')return c-L'A'+10;
+  return -1;
+}
+std::wstring QueryParameter(const std::wstring& url,const std::wstring& key) {
+  const auto query=url.find(L'?');
+  if(query==std::wstring::npos)return {};
+  const auto prefix=key+L"=";
+  auto start=url.find(prefix,query+1);
+  if(start==std::wstring::npos)return {};
+  start+=prefix.size();
+  auto end=url.find(L'&',start);
+  auto encoded=url.substr(start,end==std::wstring::npos?std::wstring::npos:end-start);
+  std::wstring decoded;
+  for(std::size_t i=0;i<encoded.size();++i){
+    if(encoded[i]==L'%'&&i+2<encoded.size()){
+      const int a=HexValue(encoded[i+1]),b=HexValue(encoded[i+2]);
+      if(a>=0&&b>=0){decoded.push_back(static_cast<wchar_t>((a<<4)|b));i+=2;continue;}
+    }
+    decoded.push_back(encoded[i]);
+  }
+  return decoded;
+}
+}
+
+bool BrowserClient::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
+    CefRefPtr<CefFrame> frame, CefRefPtr<CefRequest> request, bool, bool) {
+  if(!request||!browser||!frame||!frame->IsMain())return false;
+  const auto url=request->GetURL().ToWString();
+  if(url.rfind(L"veyra://install-update",0)!=0)return false;
+  const auto current=browser->GetMainFrame()->GetURL().ToWString();
+  if(current.find(L"newtab.html")==std::wstring::npos){
+    MessageBeep(MB_ICONWARNING);
+    return true;
+  }
+  const auto download=QueryParameter(url,L"url");
+  const auto digest=QueryParameter(url,L"sha256");
+  VeyraUpdater::StartDownload(AppState::Get().MainWindow(),download,digest);
+  return true;
 }
 
 bool BrowserClient::OnBeforePopup(CefRefPtr<CefBrowser>,

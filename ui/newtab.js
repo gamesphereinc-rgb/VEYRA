@@ -80,19 +80,51 @@
   document.querySelectorAll("[data-settings-nav]").forEach(link=>link.addEventListener("click",()=>{
     document.querySelectorAll("[data-settings-nav]").forEach(item=>item.classList.remove("active"));link.classList.add("active");
   }));
+  let availableUpdate = null;
   updateButton.addEventListener("click",async()=>{
-    updateButton.disabled=true;updateButton.textContent="Checking…";updateStatus.textContent="Contacting the official VEYRA release feed…";
+    if(availableUpdate){
+      updateButton.disabled=true;
+      updateStatus.textContent="Starting secure download and checksum verification…";
+      const target="veyra://install-update?url="+encodeURIComponent(availableUpdate.url)+"&sha256="+encodeURIComponent(availableUpdate.digest);
+      window.location.href=target;
+      return;
+    }
+    updateButton.disabled=true;updateButton.textContent="Checking…";
+    updateStatus.textContent="Contacting the official VEYRA release feed…";
     try{
       const response=await fetch("https://api.github.com/repos/gamesphereinc-rgb/VEYRA/releases/latest",{headers:{Accept:"application/vnd.github+json"}});
-      if(response.status===404)updateStatus.textContent="No stable release has been published yet. Test builds are available from GitHub Actions.";
-      else if(!response.ok)throw new Error("Release check failed.");
+      if(response.status===404){
+        updateStatus.textContent="No stable release has been published yet. Test builds are available from GitHub Actions.";
+        updateButton.textContent="Check again";
+      }else if(!response.ok)throw new Error("Release check failed.");
       else{
-        const release=await response.json();const tag=typeof release.tag_name==="string"?release.tag_name:"New release";
-        updateStatus.textContent="Latest published release: "+tag+". Open the official release page to get it.";
-        updateButton.textContent="View release";updateButton.onclick=()=>window.open(release.html_url,"_blank","noopener");
+        const release=await response.json();
+        const tag=String(release.tag_name||"").replace(/^v/i,"");
+        const parts=tag.split(".").map(value=>Number.parseInt(value,10)||0);
+        const current=[0,2,0];
+        let newer=false;
+        for(let i=0;i<3;i++){if((parts[i]||0)>current[i]){newer=true;break;}if((parts[i]||0)<current[i])break;}
+        if(!newer){
+          updateStatus.textContent="You're running VEYRA 0.2.0. No newer stable version is available.";
+          updateButton.textContent="Check again";
+        }else{
+          const asset=Array.isArray(release.assets)?release.assets.find(item=>item.name==="VEYRA-windows-x64.zip"):null;
+          const digest=asset&&typeof asset.digest==="string"?asset.digest.replace(/^sha256:/i,""):"";
+          if(asset&&asset.browser_download_url&&/^[a-f0-9]{64}$/i.test(digest)){
+            availableUpdate={url:asset.browser_download_url,digest};
+            updateStatus.textContent="VEYRA "+release.tag_name+" is available. The package will be verified before installation.";
+            updateButton.textContent="Download & install";
+          }else{
+            updateStatus.textContent="VEYRA "+release.tag_name+" is available, but this release has no verifiable package. Open the release page to review it.";
+            updateButton.textContent="View release";
+            updateButton.onclick=()=>window.open(release.html_url,"_blank","noopener");
+          }
+        }
       }
-    }catch(_){updateStatus.textContent="Couldn't check for updates. Check your connection or visit the official releases page.";}
-    finally{updateButton.disabled=false;if(updateButton.textContent!=="View release")updateButton.textContent="Check again";}
+    }catch(_){
+      updateStatus.textContent="Couldn't check for updates. Check your connection or visit the official releases page.";
+      updateButton.textContent="Check again";
+    }finally{updateButton.disabled=false;}
   });
 
   const defaults = [
