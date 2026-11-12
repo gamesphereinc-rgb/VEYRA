@@ -1,4 +1,5 @@
 #include "src/window.h"
+#include "include/cef_app.h"
 #include <windows.h>
 #include <windowsx.h>
 #ifdef GetFirstChild
@@ -586,6 +587,9 @@ LRESULT CALLBACK Proc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
     case WM_DESTROY:
       SvgIcons::Shutdown();
       if(g_gdiplusToken){GdiplusShutdown(g_gdiplusToken);g_gdiplusToken=0;}
+      // CefRunMessageLoop owns the application message pump. Signal CEF as
+      // well as Windows so shutdown always unwinds through CefShutdown().
+      CefQuitMessageLoop();
       PostQuitMessage(0);
       return 0;
     case WM_GETMINMAXINFO: {
