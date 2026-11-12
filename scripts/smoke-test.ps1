@@ -221,9 +221,12 @@ finally {
             if (-not $process.HasExited) {
                 Add-Note "Closing VEYRA after the test."
                 [void]$process.CloseMainWindow()
-                if (-not $process.WaitForExit(8000)) {
-                    Add-Note "Graceful close timed out; stopping the test process."
+                if (-not $process.WaitForExit(20000)) {
+                    Add-Note "Graceful close timed out after 20 seconds; stopping the test process."
                     Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+                }
+                else {
+                    Add-Note "VEYRA exited cleanly after the preview."
                 }
             }
         }

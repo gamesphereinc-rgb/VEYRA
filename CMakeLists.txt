@@ -10,8 +10,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/generated-ui")
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/generated")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/ui/version.js.in"
                "${CMAKE_BINARY_DIR}/generated-ui/version.js" @ONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/veyra_version.h.in"
+               "${CMAKE_BINARY_DIR}/generated/veyra_version.h" @ONLY)
 
 set(CEF_VERSION "154.0.34+g14c5a08+chromium-154.0.8037.98" CACHE STRING "Pinned stable CEF release")
 if(NOT DEFINED CEF_ROOT)
@@ -58,7 +61,7 @@ add_library(VEYRA SHARED
   src/update_manager.cpp
   resources/veyra.rc
 )
-target_include_directories(VEYRA PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" "${CEF_ROOT}")
+target_include_directories(VEYRA PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/generated" "${CEF_ROOT}")
 target_compile_definitions(VEYRA PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX CEF_USE_BOOTSTRAP)
 if(MSVC)
   target_compile_options(VEYRA PRIVATE /W4 /permissive- /EHsc /utf-8)

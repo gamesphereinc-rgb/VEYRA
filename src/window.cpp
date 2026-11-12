@@ -21,6 +21,7 @@
 #include "src/messages.h"
 #include "src/svg_icons.h"
 #include "src/update_manager.h"
+#include "veyra_version.h"
 
 using namespace Gdiplus;
 namespace {
@@ -554,7 +555,7 @@ LRESULT CALLBACK Proc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
         case ID_MENU_CLEAR_HISTORY:AppState::Get().ClearHistory();return 0;
         case ID_MENU_SETTINGS:AppState::Get().CreateTab(AppState::HomeUrl()+L"#settings");return 0;
         case ID_MENU_ABOUT:
-          MessageBoxW(hwnd,L"VEYRA 0.2.0\nBrowse beyond.\n\nPowered by Chromium Embedded Framework.",
+          MessageBoxW(hwnd,L"VEYRA " VEYRA_VERSION L"\nBrowse beyond.\n\nPowered by Chromium Embedded Framework.",
                       L"About VEYRA",MB_OK|MB_ICONINFORMATION);return 0;
         case ID_MENU_EXIT:SendMessageW(hwnd,WM_CLOSE,0,0);return 0;
       }

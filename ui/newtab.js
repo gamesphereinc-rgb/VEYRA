@@ -112,8 +112,14 @@
   wallpaperUpload.addEventListener("change",()=>{
     const file=wallpaperUpload.files&&wallpaperUpload.files[0];if(!file)return;
     if(!/^image\/(png|jpeg|webp)$/i.test(file.type)){window.alert("Choose a PNG, JPG or WebP image.");wallpaperUpload.value="";return;}
+    if(file.size>15*1024*1024){window.alert("Choose an image smaller than 15 MB.");wallpaperUpload.value="";return;}
     const reader=new FileReader(),image=new Image();
     reader.onload=()=>{image.onload=()=>{
+      if(!image.width||!image.height||image.width*image.height>40000000){
+        window.alert("That image is too large to use as a wallpaper.");
+        wallpaperUpload.value="";
+        return;
+      }
       const scale=Math.min(1,1920/image.width,1080/image.height),canvas=document.createElement("canvas");
       canvas.width=Math.max(1,Math.round(image.width*scale));canvas.height=Math.max(1,Math.round(image.height*scale));
       canvas.getContext("2d").drawImage(image,0,0,canvas.width,canvas.height);
@@ -322,6 +328,17 @@
   });
 
   window.addEventListener("keydown", event => {
+    const modifier = event.ctrlKey || event.metaKey;
+    if (modifier && event.key === ",") {
+      event.preventDefault();
+      showSettings(true);
+      return;
+    }
+    if (event.key === "Escape" && !settingsView.hidden) {
+      showSettings(false);
+      settingsButton.focus();
+      return;
+    }
     if (event.key === "/" && document.activeElement !== input &&
         !event.ctrlKey && !event.altKey && !event.metaKey) {
       event.preventDefault();

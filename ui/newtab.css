@@ -20,7 +20,7 @@ body {
 }
 .ambient {
   position: fixed; z-index: -1; pointer-events: none; width: 34vw; height: 34vw;
-  min-width: 270px; min-height: 270px; border-radius: 50%; filter: blur(105px); opacity: .15;
+  min-width: 270px; min-height: 270px; border-radius: 50%; filter: blur(76px); opacity: .14;
 }
 .ambient-a { top: -20vw; left: -12vw; background: #3ed6b4; }
 .ambient-b { right: -18vw; bottom: -23vw; background: #7469f4; opacity: .13; }
@@ -166,7 +166,7 @@ body[data-wallpaper="custom"]{background-size:cover;background-position:center;b
 .settings-nav-item{padding:12px 14px;border-radius:10px;text-decoration:none;color:#93a8bb;font-size:12px;border:1px solid transparent;background:rgba(18,31,48,.35)}
 .settings-nav-item:hover,.settings-nav-item.active{color:#eaf7f4;background:rgba(29,54,67,.78);border-color:rgba(117,220,203,.23)}
 .settings-content{display:grid;gap:15px}
-.settings-card{padding:23px;border:1px solid rgba(133,164,190,.16);border-radius:17px;background:rgba(13,24,38,.83);box-shadow:0 15px 42px rgba(0,0,0,.11);backdrop-filter:blur(16px)}
+.settings-card{padding:23px;border:1px solid rgba(133,164,190,.16);border-radius:17px;background:rgba(13,24,38,.83);box-shadow:0 15px 42px rgba(0,0,0,.11);backdrop-filter:blur(10px)}
 .settings-card-heading{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:22px}
 .settings-card h3{margin:0;color:#eaf2f8;font-size:16px;letter-spacing:-.02em}
 .settings-card-heading p{margin:6px 0 0;color:#8298ad;font-size:12px}
@@ -237,3 +237,14 @@ body[data-theme="light"][data-wallpaper="coast"]{background-image:linear-gradien
 @media (max-width: 460px) {
   .settings-nav-item { flex-direction: column; gap: 5px; }
 }
+
+
+/* Keyboard focus should remain visible across the custom browser surfaces. */
+:where(a, button, input, select):focus-visible {
+  outline: 2px solid #78e4cf;
+  outline-offset: 3px;
+}
+body[data-theme="light"] :where(a, button, input, select):focus-visible {
+  outline-color: #247d75;
+}
+.primary-button:disabled { opacity: .62; cursor: wait; }
