@@ -107,7 +107,6 @@ std::unique_ptr<Gdiplus::Bitmap> LoadIcon(const std::wstring& name) {
       (kRasterSize - drawWidth) * 0.5f,
       (kRasterSize - drawHeight) * 0.5f,
       drawWidth, drawHeight);
-  const Gdiplus::Rect sourceRect(minX, minY, visibleWidth, visibleHeight);
 
   auto result = std::make_unique<Gdiplus::Bitmap>(
       kRasterSize, kRasterSize, PixelFormat32bppARGB);
