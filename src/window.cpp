@@ -509,7 +509,7 @@ LRESULT CALLBACK Proc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
         case ID_MENU_NEW_TAB:AppState::Get().CreateTab();return 0;
         case ID_MENU_RELOAD:AppState::Get().Reload();return 0;
         case ID_MENU_CLOSE_TAB:AppState::Get().CloseActiveTab();return 0;
-        case ID_MENU_ABOUT:MessageBoxW(hwnd,L"VEYRA 0.2\\nBrowse beyond.\\n\\nPowered by Chromium Embedded Framework.",L"About VEYRA",MB_OK|MB_ICONINFORMATION);return 0;
+        case ID_MENU_ABOUT:MessageBoxW(hwnd,L"VEYRA " VEYRA_VERSION L"\\nBrowse beyond.\\n\\nPowered by Chromium Embedded Framework.",L"About VEYRA",MB_OK|MB_ICONINFORMATION);return 0;
         case ID_MENU_EXIT:SendMessageW(hwnd,WM_CLOSE,0,0);return 0;
       }
       break;
@@ -538,6 +538,7 @@ LRESULT CALLBACK Proc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
       if (!AppState::Get().AddBookmark()) MessageBeep(MB_ICONWARNING);
       InvalidateRect(hwnd, nullptr, FALSE);
       return 0;
+    case WM_VEYRA_SETTINGS:AppState::Get().CreateTab(AppState::HomeUrl()+L"#settings");return 0;
     case WM_VEYRA_MENU_COMMAND:{
       const UINT command=static_cast<UINT>(wp);
       if(command>=ID_MENU_BOOKMARK_BASE&&command<ID_MENU_BOOKMARK_BASE+4){

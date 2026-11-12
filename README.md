@@ -49,7 +49,7 @@ These development builds are not code-signed, so Windows may show an unknown-pub
 - Chromium's CEF bootstrap architecture for the Windows sandbox.
 - Pop-up requests open in VEYRA tabs.
 
-Keyboard shortcuts: **Ctrl+T** new tab, **Ctrl+W** close tab, **Ctrl+L** focus address bar, **Ctrl+R** reload, **Ctrl+,** open Settings, **Escape** close Settings, **F5** reload, **Alt+Left** back, and **Alt+Right** forward.
+Keyboard shortcuts: **Ctrl+T** new tab, **Ctrl+W** close tab, **Ctrl+L** focus address bar, **Ctrl+R** reload, **Ctrl+,** open Settings from any tab, **Escape** close Settings, **F5** reload, **Alt+Left** back, and **Alt+Right** forward.
 
 ## Still being developed
 
