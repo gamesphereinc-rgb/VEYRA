@@ -29,6 +29,14 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/ui/version.js.in"
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/veyra_version.h.in"
                "${CMAKE_BINARY_DIR}/generated/veyra_version.h" @ONLY)
 
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/installer")
+file(TO_CMAKE_PATH "${CMAKE_BINARY_DIR}/out" VEYRA_BUILD_DIRECTORY)
+file(TO_CMAKE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/resources/veyra.ico" VEYRA_ICON_PATH)
+file(TO_CMAKE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE" VEYRA_LICENSE_PATH)
+file(TO_CMAKE_PATH "${CMAKE_BINARY_DIR}/installer" VEYRA_INSTALLER_DIRECTORY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/installer/veyra.iss.in"
+               "${CMAKE_BINARY_DIR}/veyra.iss" @ONLY)
+
 set(CEF_VERSION "154.0.34+g14c5a08+chromium-154.0.8037.98" CACHE STRING "Pinned stable CEF release")
 if(NOT DEFINED CEF_ROOT)
   set(CEF_ROOT "${CMAKE_SOURCE_DIR}/third_party/cef/cef_binary_${CEF_VERSION}_windows64_minimal" CACHE PATH "Extracted minimal CEF distribution")
@@ -124,6 +132,20 @@ add_custom_command(TARGET VEYRA POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/scripts/apply-update.ps1" "$<TARGET_FILE_DIR:VEYRA>/scripts/apply-update.ps1"
   VERBATIM
 )
+find_program(INNO_SETUP_COMPILER NAMES ISCC.exe ISCC
+  PATHS "$ENV{ProgramFiles(x86)}/Inno Setup 6" "$ENV{ProgramFiles}/Inno Setup 6"
+)
+if(INNO_SETUP_COMPILER)
+  add_custom_target(VEYRAInstaller
+    COMMAND "${INNO_SETUP_COMPILER}" "${CMAKE_BINARY_DIR}/veyra.iss"
+    DEPENDS VEYRA
+    COMMENT "Building the VEYRA Windows setup wizard"
+    VERBATIM
+  )
+else()
+  message(STATUS "Inno Setup 6 was not found. Install it to build VEYRAInstaller.")
+endif()
+
 if(CMAKE_GENERATOR MATCHES "Visual Studio")
   set_target_properties(VEYRA PROPERTIES
     VS_DEBUGGER_COMMAND "$<TARGET_FILE_DIR:VEYRA>/VEYRA.exe"

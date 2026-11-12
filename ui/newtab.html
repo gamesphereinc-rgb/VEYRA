@@ -6,6 +6,7 @@
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#090f1b">
   <title>New tab · VEYRA</title>
+  <link rel="icon" type="image/svg+xml" href="icons/veyra.svg">
   <link rel="stylesheet" href="newtab.css">
 </head>
 <body>
@@ -15,7 +16,7 @@
     <header class="topbar">
       <a class="brand" href="#" aria-label="VEYRA home">
         <span class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 40 40"><path d="M5 6 20 34 35 6" /><path d="M20 17v7" /></svg>
+          <svg viewBox="0 0 40 40"><path d="M9 8 20 32 31 8" /></svg>
         </span>
         <span class="brand-name">VEYRA</span>
       </a>
@@ -50,7 +51,7 @@
             <div class="section-label">YOUR SHORTCUTS</div>
             <p>Good places to start.</p>
           </div>
-          <button id="add-shortcut" class="add-shortcut" type="button"><span>＋</span> Add shortcut</button>
+          <button id="add-shortcut" class="add-shortcut" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Add shortcut</button>
         </div>
         <div class="shortcuts" id="shortcuts">
           <a class="shortcut" href="https://duckduckgo.com/"><span class="shortcut-icon icon-search">D</span><span class="shortcut-copy"><strong>DuckDuckGo</strong><small>Search privately</small></span><span class="shortcut-arrow">↗</span></a>
@@ -85,7 +86,7 @@
           <p class="setting-note">Your image is resized locally before it is saved. It is not uploaded to VEYRA or a server.</p>
         </section>
         <section class="settings-card" id="search"><div class="settings-card-heading"><div><h3>Search</h3><p>Choose the search engine used on the new-tab page.</p></div></div><label class="setting-label" for="search-engine">Default search engine</label><select id="search-engine" class="settings-select"><option value="duckduckgo">DuckDuckGo</option><option value="google">Google</option><option value="bing">Bing</option><option value="brave">Brave Search</option></select></section>
-        <section class="settings-card" id="updates"><div class="settings-card-heading"><div><h3>About VEYRA</h3><p>Browse beyond.</p></div><span class="version-chip">EARLY ACCESS · <span id="veyra-version">0.3.0</span></span></div><div class="update-row"><div><strong>Keep VEYRA up to date</strong><p id="update-status">Check GitHub for the latest published VEYRA release.</p></div><button id="check-updates" class="primary-button" type="button">Check for updates</button></div><p class="setting-note">When a verified stable release is available, VEYRA can download it and install it after closing the browser. No release may be available for this preview build yet.</p><a class="release-link" href="https://github.com/gamesphereinc-rgb/VEYRA/releases" target="_blank" rel="noreferrer">View official VEYRA releases ↗</a></section>
+        <section class="settings-card" id="updates"><div class="settings-card-heading"><div><h3>About VEYRA</h3><p>Browse beyond.</p></div><span class="version-chip">EARLY ACCESS · <span id="veyra-version">0.4.0</span></span></div><div class="update-row"><div><strong>Keep VEYRA up to date</strong><p id="update-status">Check GitHub for the latest published VEYRA release.</p></div><button id="check-updates" class="primary-button" type="button">Check for updates</button></div><p class="setting-note">When a verified stable release is available, VEYRA can download it and install it after closing the browser. No release may be available for this preview build yet.</p><a class="release-link" href="https://github.com/gamesphereinc-rgb/VEYRA/releases" target="_blank" rel="noreferrer">View official VEYRA releases ↗</a></section>
       </div>
     </div>
   </section>
