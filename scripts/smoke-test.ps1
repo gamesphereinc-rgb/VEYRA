@@ -107,13 +107,67 @@ namespace VeyraRemotePreview {
 
         [DllImport("user32.dll", SetLastError = true)]
         public static extern bool MoveWindow(IntPtr hWnd, int x, int y, int width, int height, bool repaint);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern bool SetCursorPos(int x, int y);
+
+        [DllImport("user32.dll")]
+        public static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extraInfo);
     }
 }
 "@ | Out-Null
 
+        function Get-VeyraWindowRect {
+            $rect = New-Object VeyraRemotePreview.WindowRect
+            if (-not [VeyraRemotePreview.NativeMethods]::GetWindowRect($windowHandle, [ref]$rect)) {
+                throw "Windows could not read the VEYRA window bounds."
+            }
+            return $rect
+        }
+
+        function Save-VeyraWindowScreenshot([string]$FileName) {
+            $rect = Get-VeyraWindowRect
+            $screenBounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+            $left = [Math]::Max($screenBounds.Left, $rect.Left)
+            $top = [Math]::Max($screenBounds.Top, $rect.Top)
+            $right = [Math]::Min(($screenBounds.Left + $screenBounds.Width), $rect.Right)
+            $bottom = [Math]::Min(($screenBounds.Top + $screenBounds.Height), $rect.Bottom)
+            $width = $right - $left
+            $height = $bottom - $top
+
+            if ($width -lt 400 -or $height -lt 300) {
+                throw "The VEYRA window is outside the available desktop capture area."
+            }
+
+            $path = Join-Path $ResultsPath $FileName
+            $bitmap = New-Object System.Drawing.Bitmap($width, $height)
+            $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+            try {
+                $sourcePoint = New-Object System.Drawing.Point($left, $top)
+                $destinationPoint = New-Object System.Drawing.Point(0, 0)
+                $captureSize = New-Object System.Drawing.Size($width, $height)
+                $graphics.CopyFromScreen(
+                    $sourcePoint, $destinationPoint, $captureSize,
+                    [System.Drawing.CopyPixelOperation]::SourceCopy
+                )
+                $bitmap.Save($path, [System.Drawing.Imaging.ImageFormat]::Png)
+            }
+            finally {
+                $graphics.Dispose()
+                $bitmap.Dispose()
+            }
+
+            $info = Get-Item -LiteralPath $path
+            if ($info.Length -lt 5000) {
+                throw "Screenshot $FileName was unexpectedly small ($($info.Length) bytes)."
+            }
+            Add-Note "Captured $FileName at ${width}x${height} ($($info.Length) bytes)."
+        }
+
         $screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
         $targetWidth = [Math]::Min(1100, [Math]::Max(720, $screen.Width - 40))
-        $targetHeight = [Math]::Min(760, [Math]::Max(560, $screen.Height - 40))
+        # Leave the taskbar and its reserved area outside the browser window.
+        $targetHeight = [Math]::Min(680, [Math]::Max(560, $screen.Height - 110))
         [void][VeyraRemotePreview.NativeMethods]::ShowWindow($windowHandle, 9)
         [void][VeyraRemotePreview.NativeMethods]::MoveWindow(
             $windowHandle, $screen.Left + 10, $screen.Top + 10,
@@ -121,48 +175,34 @@ namespace VeyraRemotePreview {
         )
         [void][VeyraRemotePreview.NativeMethods]::SetForegroundWindow($windowHandle)
         Start-Sleep -Seconds 3
-
-        $windowRect = New-Object VeyraRemotePreview.WindowRect
-        if (-not [VeyraRemotePreview.NativeMethods]::GetWindowRect($windowHandle, [ref]$windowRect)) {
-            throw "Windows could not read the VEYRA window bounds."
+        Save-VeyraWindowScreenshot "veyra-home.png"
+        $screenshotStatus = "HOME CAPTURED"
+        
+        # Click VEYRA's own new-tab Settings button using its stable topbar position.
+        # Coordinates are relative to the right edge because the page header is right-aligned.
+        $windowRect = Get-VeyraWindowRect
+        $settingsX = $windowRect.Right - 247
+        $settingsY = $windowRect.Top + 161
+        if ($settingsX -le $windowRect.Left -or $settingsY -ge $windowRect.Bottom) {
+            throw "The Settings button position falls outside the VEYRA window."
         }
+        [void][VeyraRemotePreview.NativeMethods]::SetCursorPos($settingsX, $settingsY)
+        [VeyraRemotePreview.NativeMethods]::mouse_event(0x0002, 0, 0, 0, [UIntPtr]::Zero)
+        [VeyraRemotePreview.NativeMethods]::mouse_event(0x0004, 0, 0, 0, [UIntPtr]::Zero)
+        Add-Note "Clicked the new-tab Settings control."
+        Start-Sleep -Seconds 2
+        Save-VeyraWindowScreenshot "veyra-settings-appearance.png"
 
-        $left = [Math]::Max($screen.Left, $windowRect.Left)
-        $top = [Math]::Max($screen.Top, $windowRect.Top)
-        $right = [Math]::Min(($screen.Left + $screen.Width), $windowRect.Right)
-        $bottom = [Math]::Min(($screen.Top + $screen.Height), $windowRect.Bottom)
-        $captureWidth = $right - $left
-        $captureHeight = $bottom - $top
-
-        if ($captureWidth -lt 400 -or $captureHeight -lt 300) {
-            throw "The VEYRA window is outside the available desktop capture area."
-        }
-
-        $bitmap = New-Object System.Drawing.Bitmap($captureWidth, $captureHeight)
-        $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
-        try {
-            $sourcePoint = New-Object System.Drawing.Point($left, $top)
-            $destinationPoint = New-Object System.Drawing.Point(0, 0)
-            $captureSize = New-Object System.Drawing.Size($captureWidth, $captureHeight)
-            $graphics.CopyFromScreen(
-                $sourcePoint, $destinationPoint, $captureSize,
-                [System.Drawing.CopyPixelOperation]::SourceCopy
-            )
-            $bitmap.Save($screenshotPath, [System.Drawing.Imaging.ImageFormat]::Png)
-        }
-        finally {
-            $graphics.Dispose()
-            $bitmap.Dispose()
-        }
-
-        $screenshotInfo = Get-Item -LiteralPath $screenshotPath
-        if ($screenshotInfo.Length -lt 5000) {
-            throw "The desktop capture was unexpectedly small ($($screenshotInfo.Length) bytes)."
-        }
-
-        $screenshotStatus = "CAPTURED"
-        Add-Note "Captured VEYRA window at $($captureWidth)x$($captureHeight)."
-        Add-Note "Screenshot size: $($screenshotInfo.Length) bytes."
+        # Scroll within the settings content to reveal the About & updates card.
+        $scrollX = $windowRect.Left + [int](($windowRect.Right - $windowRect.Left) * 0.68)
+        $scrollY = $windowRect.Top + [int](($windowRect.Bottom - $windowRect.Top) * 0.72)
+        [void][VeyraRemotePreview.NativeMethods]::SetCursorPos($scrollX, $scrollY)
+        $wheelData = [BitConverter]::ToUInt32([BitConverter]::GetBytes([int]-850), 0)
+        [VeyraRemotePreview.NativeMethods]::mouse_event(0x0800, 0, 0, $wheelData, [UIntPtr]::Zero)
+        Add-Note "Scrolled settings content to reveal lower sections."
+        Start-Sleep -Seconds 2
+        Save-VeyraWindowScreenshot "veyra-settings-lower.png"
+        $screenshotStatus = "HOME AND SETTINGS CAPTURED"
     }
     catch {
         $screenshotStatus = "UNAVAILABLE"
@@ -220,7 +260,7 @@ $summary = @(
     "- Startup / main window: **$launchStatus**"
     "- Desktop screenshot: **$screenshotStatus**"
     "- Window title: $windowTitle"
-    "- Screenshot file: $(if (Test-Path -LiteralPath $screenshotPath) { 'veyra-home.png' } else { 'not available' })"
+    "- Screenshots: veyra-home.png, veyra-settings-appearance.png, veyra-settings-lower.png (when capture succeeds)"
     ""
     "## Diagnostics"
     ""
