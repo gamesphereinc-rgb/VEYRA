@@ -2,7 +2,7 @@
 
 **Browse beyond.**
 
-**Current development version: 0.4.0**
+**Current development version: 0.4.1**
 
 VEYRA is an independent Windows browser with its own native interface and visual identity, powered by Chromium through the Chromium Embedded Framework (CEF).
 
@@ -18,7 +18,7 @@ VEYRA is not an Electron app and does not use Microsoft Edge WebView2. Its Windo
 
 The Windows build produces two packages:
 
-- **VEYRA-Setup-x64** — a normal setup wizard. Download the artifact, extract its ZIP, and run the included `VEYRA-Setup-0.4.0-x64.exe`. Choose the install location and whether to create a desktop shortcut. VEYRA is installed for the current Windows user, without requiring administrator access.
+- **VEYRA-Setup-x64** — a normal setup wizard. Download the artifact, extract its ZIP, and run the included `VEYRA-Setup-0.4.1-x64.exe`. Choose the install location and whether to create a desktop shortcut. VEYRA is installed for the current Windows user, without requiring administrator access.
 - **VEYRA-windows-x64** — a portable ZIP for people who prefer not to install the browser. Extract the complete folder and run `VEYRA.exe` from inside it. The package also includes the original `bootstrap.exe`, which can be run with `--module=VEYRA` for a direct test of CEF's unmodified launcher.
 
 The installer creates a Start Menu shortcut and registers VEYRA with Windows so it can be removed from **Settings → Apps → Installed apps**. It does not delete your browser profile during uninstall; profile data remains in your Local AppData folder.

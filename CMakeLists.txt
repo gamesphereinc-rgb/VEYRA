@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(VEYRA VERSION 0.4.0 LANGUAGES CXX RC)
+project(VEYRA VERSION 0.4.1 LANGUAGES CXX RC)
 
 if(NOT WIN32)
   message(FATAL_ERROR "The first VEYRA milestone targets Windows 10/11 x64.")
