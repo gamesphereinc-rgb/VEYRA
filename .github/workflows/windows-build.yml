@@ -88,6 +88,9 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 10
     steps:
+      - name: Check out smoke-test script
+        uses: actions/checkout@v7
+
       - name: Download VEYRA build
         uses: actions/download-artifact@v7
         with:
