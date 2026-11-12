@@ -21,7 +21,6 @@ $notes = New-Object System.Collections.Generic.List[string]
 
 New-Item -ItemType Directory -Force -Path $ResultsPath | Out-Null
 $PackagePath = (Resolve-Path $PackagePath).Path
-$exePath = Join-Path $PackagePath "VEYRA.exe"
 $screenshotPath = Join-Path $ResultsPath "veyra-home.png"
 $logPath = Join-Path $ResultsPath "startup-diagnostics.txt"
 
@@ -30,11 +29,18 @@ function Add-Note([string]$Message) {
 }
 
 try {
-    if (-not (Test-Path -LiteralPath $exePath -PathType Leaf)) {
-        throw "VEYRA.exe was not found in the downloaded Windows build artifact."
+    $executables = @(Get-ChildItem -LiteralPath $PackagePath -Filter "VEYRA.exe" -File -Recurse)
+    if ($executables.Count -eq 0) {
+        throw "VEYRA.exe was not found anywhere in the downloaded Windows build artifact."
+    }
+    if ($executables.Count -gt 1) {
+        throw "The build artifact contains multiple VEYRA.exe files; refusing to guess which package to launch."
     }
 
+    $exePath = $executables[0].FullName
+    $PackagePath = $executables[0].Directory.FullName
     Add-Note "Found packaged executable: $exePath"
+    Add-Note "Using executable directory as working directory: $PackagePath"
     $process = Start-Process -FilePath $exePath -WorkingDirectory $PackagePath -PassThru
     Add-Note "Started VEYRA process with PID $($process.Id)."
 
