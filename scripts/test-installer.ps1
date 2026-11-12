@@ -46,8 +46,21 @@ try {
     }
 
     $installedExe = Join-Path $installDirectory "VEYRA.exe"
+    $installedBootstrap = Join-Path $installDirectory "bootstrap.exe"
+    $installedIcon = Join-Path $installDirectory "VEYRA.ico"
     if (-not (Test-Path -LiteralPath $installedExe -PathType Leaf)) {
         throw "Setup completed but VEYRA.exe was not installed."
+    }
+    if (-not (Test-Path -LiteralPath $installedBootstrap -PathType Leaf)) {
+        throw "Setup completed but the original CEF bootstrap.exe was not installed."
+    }
+    if (-not (Test-Path -LiteralPath $installedIcon -PathType Leaf)) {
+        throw "Setup completed but VEYRA.ico was not installed."
+    }
+    $bootstrapHash = (Get-FileHash -LiteralPath $installedBootstrap -Algorithm SHA256).Hash
+    $renamedHash = (Get-FileHash -LiteralPath $installedExe -Algorithm SHA256).Hash
+    if ($bootstrapHash -ne $renamedHash) {
+        throw "VEYRA.exe is not byte-for-byte identical to bootstrap.exe."
     }
     if (-not (Test-Path -LiteralPath (Join-Path $installDirectory "VEYRA.dll") -PathType Leaf)) {
         throw "Setup completed but VEYRA.dll is missing."
@@ -57,6 +70,14 @@ try {
     }
     if (-not (Test-Path -LiteralPath $startMenuShortcut -PathType Leaf)) {
         throw "Setup did not create the VEYRA Start Menu shortcut."
+    }
+    $shell = New-Object -ComObject WScript.Shell
+    $shortcut = $shell.CreateShortcut($startMenuShortcut)
+    if ((Split-Path -Leaf $shortcut.TargetPath) -ne "VEYRA.exe") {
+        throw "The VEYRA Start Menu shortcut does not target VEYRA.exe."
+    }
+    if ($shortcut.IconLocation -notmatch "VEYRA\.ico") {
+        throw "The VEYRA Start Menu shortcut does not use the VEYRA sidecar icon."
     }
 
     $uninstallEntry = Get-ChildItem -LiteralPath $uninstallRoot -ErrorAction Stop |

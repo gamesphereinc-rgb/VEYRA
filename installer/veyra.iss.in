@@ -17,7 +17,7 @@ DefaultDirName={localappdata}\Programs\VEYRA
 DefaultGroupName=VEYRA
 DisableProgramGroupPage=yes
 UninstallDisplayName=VEYRA
-UninstallDisplayIcon={app}\VEYRA.exe
+UninstallDisplayIcon={app}\VEYRA.ico
 SetupIconFile={#IconPath}
 LicenseFile={#LicensePath}
 OutputDir={#InstallerOutputDirectory}
@@ -43,9 +43,9 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 Source: "{#BuildDirectory}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{autoprograms}\VEYRA"; Filename: "{app}\VEYRA.exe"; WorkingDir: "{app}"
+Name: "{autoprograms}\VEYRA"; Filename: "{app}\VEYRA.exe"; WorkingDir: "{app}"; IconFilename: "{app}\VEYRA.ico"
 Name: "{autoprograms}\Uninstall VEYRA"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\VEYRA"; Filename: "{app}\VEYRA.exe"; WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{autodesktop}\VEYRA"; Filename: "{app}\VEYRA.exe"; WorkingDir: "{app}"; IconFilename: "{app}\VEYRA.ico"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\VEYRA.exe"; Description: "Launch VEYRA"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent

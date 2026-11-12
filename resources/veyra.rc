@@ -1,3 +1,2 @@
 #include <windows.h>
-101 ICON "veyra.ico"
 1 RT_MANIFEST "veyra.manifest"
