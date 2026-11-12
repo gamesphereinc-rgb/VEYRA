@@ -21,7 +21,7 @@
   const updateStatus = document.getElementById("update-status");
   const versionPattern = /^\d+\.\d+\.\d+$/;
   const appVersion = typeof window.VEYRA_VERSION === "string" &&
-    versionPattern.test(window.VEYRA_VERSION) ? window.VEYRA_VERSION : "0.3.0";
+    versionPattern.test(window.VEYRA_VERSION) ? window.VEYRA_VERSION : "0.4.0";
   const versionLabel = document.getElementById("veyra-version");
   if (versionLabel) versionLabel.textContent = appVersion;
 

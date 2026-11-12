@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(VEYRA VERSION 0.3.0 LANGUAGES CXX RC)
+project(VEYRA VERSION 0.4.0 LANGUAGES CXX RC)
 
 if(NOT WIN32)
   message(FATAL_ERROR "The first VEYRA milestone targets Windows 10/11 x64.")
@@ -9,12 +9,33 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Generate a real Windows icon before compiling the application resources.
+find_program(POWERSHELL_EXECUTABLE NAMES powershell pwsh REQUIRED)
+execute_process(
+  COMMAND "${POWERSHELL_EXECUTABLE}" -NoLogo -NoProfile -ExecutionPolicy Bypass
+          -File "${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate-icon.ps1"
+          -OutputPath "${CMAKE_CURRENT_SOURCE_DIR}/resources/veyra.ico"
+  RESULT_VARIABLE VEYRA_ICON_GENERATION_RESULT
+)
+if(NOT VEYRA_ICON_GENERATION_RESULT EQUAL 0 OR
+   NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/resources/veyra.ico")
+  message(FATAL_ERROR "VEYRA application icon generation failed.")
+endif()
+
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/generated-ui")
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/generated")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/ui/version.js.in"
                "${CMAKE_BINARY_DIR}/generated-ui/version.js" @ONLY)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/veyra_version.h.in"
                "${CMAKE_BINARY_DIR}/generated/veyra_version.h" @ONLY)
+
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/installer")
+file(TO_CMAKE_PATH "${CMAKE_BINARY_DIR}/out" VEYRA_BUILD_DIRECTORY)
+file(TO_CMAKE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/resources/veyra.ico" VEYRA_ICON_PATH)
+file(TO_CMAKE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE" VEYRA_LICENSE_PATH)
+file(TO_CMAKE_PATH "${CMAKE_BINARY_DIR}/installer" VEYRA_INSTALLER_DIRECTORY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/installer/veyra.iss.in"
+               "${CMAKE_BINARY_DIR}/veyra.iss" @ONLY)
 
 set(CEF_VERSION "154.0.34+g14c5a08+chromium-154.0.8037.98" CACHE STRING "Pinned stable CEF release")
 if(NOT DEFINED CEF_ROOT)
@@ -52,6 +73,15 @@ find_package(CEF REQUIRED)
 ADD_LOGICAL_TARGET("libcef_lib" "${CEF_LIB_DEBUG}" "${CEF_LIB_RELEASE}")
 add_subdirectory("${CEF_LIBCEF_DLL_WRAPPER_PATH}" libcef_dll_wrapper)
 
+add_executable(VEYRAIconPatcher tools/icon_patcher.cpp)
+target_compile_definitions(VEYRAIconPatcher PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
+if(MSVC)
+  target_compile_options(VEYRAIconPatcher PRIVATE /W4 /permissive- /EHsc /utf-8)
+endif()
+set_target_properties(VEYRAIconPatcher PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tools"
+)
+
 add_library(VEYRA SHARED
   src/main_win.cpp
   src/app_state.cpp
@@ -61,6 +91,7 @@ add_library(VEYRA SHARED
   src/update_manager.cpp
   resources/veyra.rc
 )
+add_dependencies(VEYRA VEYRAIconPatcher)
 target_include_directories(VEYRA PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/generated" "${CEF_ROOT}")
 target_compile_definitions(VEYRA PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX CEF_USE_BOOTSTRAP)
 if(MSVC)
@@ -75,6 +106,9 @@ set_target_properties(VEYRA PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/out"
   LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/out"
   ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+  RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/out"
+  LIBRARY_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/out"
+  ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/lib"
 )
 
 # The CEF bootstrap launcher provides the Windows sandbox handle to VEYRA.dll.
@@ -91,12 +125,27 @@ if(COMMAND COPY_FILES)
 endif()
 add_custom_command(TARGET VEYRA POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CEF_BINARY_DIR}/bootstrap.exe" "$<TARGET_FILE_DIR:VEYRA>/VEYRA.exe"
+  COMMAND "$<TARGET_FILE:VEYRAIconPatcher>" "$<TARGET_FILE_DIR:VEYRA>/VEYRA.exe" "${CMAKE_CURRENT_SOURCE_DIR}/resources/veyra.ico"
   COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/ui" "$<TARGET_FILE_DIR:VEYRA>/ui"
   COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/generated-ui/version.js" "$<TARGET_FILE_DIR:VEYRA>/ui/version.js"
   COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:VEYRA>/scripts"
   COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/scripts/apply-update.ps1" "$<TARGET_FILE_DIR:VEYRA>/scripts/apply-update.ps1"
   VERBATIM
 )
+find_program(INNO_SETUP_COMPILER NAMES ISCC.exe ISCC
+  PATHS "C:/Program Files (x86)/Inno Setup 6" "C:/Program Files/Inno Setup 6"
+)
+if(INNO_SETUP_COMPILER)
+  add_custom_target(VEYRAInstaller
+    COMMAND "${INNO_SETUP_COMPILER}" "${CMAKE_BINARY_DIR}/veyra.iss"
+    DEPENDS VEYRA
+    COMMENT "Building the VEYRA Windows setup wizard"
+    VERBATIM
+  )
+else()
+  message(STATUS "Inno Setup 6 was not found. Install it to build VEYRAInstaller.")
+endif()
+
 if(CMAKE_GENERATOR MATCHES "Visual Studio")
   set_target_properties(VEYRA PROPERTIES
     VS_DEBUGGER_COMMAND "$<TARGET_FILE_DIR:VEYRA>/VEYRA.exe"

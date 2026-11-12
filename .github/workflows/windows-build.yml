@@ -11,6 +11,8 @@ on:
       - 'ui/**'
       - 'resources/**'
       - 'scripts/**'
+      - 'tools/**'
+      - 'installer/**'
       - '.github/workflows/windows-build.yml'
   # Validate browser changes before they are merged into main.
   pull_request:
@@ -21,6 +23,8 @@ on:
       - 'ui/**'
       - 'resources/**'
       - 'scripts/**'
+      - 'tools/**'
+      - 'installer/**'
       - '.github/workflows/windows-build.yml'
   # Use workflow_dispatch for a deliberate manual test build from a selected ref.
   workflow_dispatch:
@@ -41,6 +45,17 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v7
+
+      - name: Set up Inno Setup
+        shell: powershell
+        run: |
+          $iscc = Join-Path "${env:ProgramFiles(x86)}" "Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path -LiteralPath $iscc)) {
+            choco install innosetup --yes --no-progress
+          }
+          if (-not (Test-Path -LiteralPath $iscc)) {
+            throw "Inno Setup 6 compiler was not found."
+          }
 
       - name: Set up CMake
         uses: lukka/get-cmake@latest
@@ -71,8 +86,16 @@ jobs:
           $cef = (Resolve-Path "third_party/cef/cef_binary_154.0.34+g14c5a08+chromium-154.0.8037.98_windows64_minimal").Path
           cmake -S . -B build -G "Visual Studio 17" -A x64 "-DCEF_ROOT=$cef"
 
-      - name: Build VEYRA
-        run: cmake --build build --config Release --target VEYRA --parallel
+      - name: Build VEYRA and installer
+        run: cmake --build build --config Release --target VEYRAInstaller --parallel
+
+      - name: Upload VEYRA Windows installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: VEYRA-Setup-x64
+          path: build/installer/*.exe
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Upload VEYRA Windows build
         uses: actions/upload-artifact@v7
@@ -96,6 +119,16 @@ jobs:
         with:
           name: VEYRA-windows-x64
           path: package
+
+      - name: Download VEYRA installer
+        uses: actions/download-artifact@v7
+        with:
+          name: VEYRA-Setup-x64
+          path: installer
+
+      - name: Verify VEYRA installer install and uninstall
+        shell: pwsh
+        run: ./scripts/test-installer.ps1 -InstallerDirectory "${{ github.workspace }}\\installer" -TestRoot "${env:RUNNER_TEMP}\\veyra-installer-test"
 
       - name: Launch VEYRA and capture desktop preview
         shell: powershell
@@ -122,11 +155,19 @@ jobs:
         with:
           name: VEYRA-windows-x64
           path: VEYRA-windows-x64
-      - name: Create release archive
+      - name: Download VEYRA Windows installer
+        uses: actions/download-artifact@v7
+        with:
+          name: VEYRA-Setup-x64
+          path: VEYRA-installer
+      - name: Create portable release archive
         shell: pwsh
         run: Compress-Archive -Path "VEYRA-windows-x64/*" -DestinationPath "VEYRA-windows-x64.zip" -CompressionLevel Optimal
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
-        run: gh release create "$env:GITHUB_REF_NAME" "VEYRA-windows-x64.zip" --verify-tag --title "VEYRA $env:GITHUB_REF_NAME" --generate-notes
+        run: |
+          $installer = Get-ChildItem -LiteralPath "VEYRA-installer" -Filter "VEYRA-Setup-*-x64.exe" -File | Select-Object -First 1
+          if (-not $installer) { throw "The VEYRA installer artifact is missing." }
+          gh release create "$env:GITHUB_REF_NAME" "VEYRA-windows-x64.zip" $installer.FullName --verify-tag --title "VEYRA $env:GITHUB_REF_NAME" --generate-notes

@@ -2,7 +2,7 @@
 
 **Browse beyond.**
 
-**Current development version: 0.3.0**
+**Current development version: 0.4.0**
 
 VEYRA is an independent Windows browser with its own native interface and visual identity, powered by Chromium through the Chromium Embedded Framework (CEF).
 
@@ -16,25 +16,23 @@ VEYRA is not an Electron app and does not use Microsoft Edge WebView2. Its Windo
 
 **[Download VEYRA test builds](https://github.com/gamesphereinc-rgb/VEYRA/actions/workflows/windows-build.yml)**
 
-When a build has completed successfully:
+The Windows build produces two packages:
 
-1. Open the newest successful **Windows build** run on the `main` branch.
-2. Scroll down to the **Artifacts** section.
-3. Download **VEYRA-windows-x64**.
-4. Extract the ZIP to a folder on your PC.
-5. Open **VEYRA.exe** inside the extracted folder.
+- **VEYRA-Setup-x64** — a normal setup wizard. Download the artifact, extract its ZIP, and run the included `VEYRA-Setup-0.4.0-x64.exe`. Choose the install location and whether to create a desktop shortcut. VEYRA is installed for the current Windows user, without requiring administrator access.
+- **VEYRA-windows-x64** — a portable ZIP for people who prefer not to install the browser. Extract the complete folder and run `VEYRA.exe` from inside it.
 
-That's it. You do not need to install Visual Studio, CMake, Python, or PowerShell, and you do not need to download Chromium or CEF separately.
+The installer creates a Start Menu shortcut and registers VEYRA with Windows so it can be removed from **Settings → Apps → Installed apps**. It does not delete your browser profile during uninstall; profile data remains in your Local AppData folder.
 
-**Keep the extracted files together.** VEYRA.exe relies on the other files and folders in the package. Do not move the EXE by itself.
+To download a test installer, open the newest successful **Windows build** run on the `main` branch, scroll down to **Artifacts**, download **VEYRA-Setup-x64**, extract it, and run the setup EXE. Both packages include the full Chromium runtime. Keep the portable files together if you use that option.
 
-The current test packages are GitHub Actions artifacts and expire after 14 days. A run that is queued, running, cancelled, or failed does not have a usable package. Look for a completed successful run with the **VEYRA-windows-x64** artifact.
+Test-build artifacts expire after 14 days. These development builds are not code-signed, so Windows may show an unknown-publisher or SmartScreen warning. Only download builds from this official repository.
 
 These development builds are not code-signed, so Windows may show an unknown-publisher or SmartScreen warning. Only download builds from this official repository, and remember that this is unfinished software.
 
 ## What's included so far
 
-- Native Windows application window and custom VEYRA browser interface.
+- Native Windows application window and custom VEYRA browser interface, with aligned icons and a branded Windows executable icon.
+- A Windows setup wizard with per-user installation, Start Menu shortcuts, optional desktop shortcut, and an uninstaller.
 - Multiple Chromium tabs.
 - Address bar with HTTPS navigation and DuckDuckGo search.
 - Back, forward, reload, stop, and home controls.
