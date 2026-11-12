@@ -120,6 +120,16 @@ jobs:
           name: VEYRA-windows-x64
           path: package
 
+      - name: Download VEYRA installer
+        uses: actions/download-artifact@v7
+        with:
+          name: VEYRA-Setup-x64
+          path: installer
+
+      - name: Verify VEYRA installer install and uninstall
+        shell: pwsh
+        run: ./scripts/test-installer.ps1 -InstallerDirectory "${{ github.workspace }}\\installer" -TestRoot "${env:RUNNER_TEMP}\\veyra-installer-test"
+
       - name: Launch VEYRA and capture desktop preview
         shell: powershell
         run: ./scripts/smoke-test.ps1 -PackagePath "${{ github.workspace }}\package" -ResultsPath "${{ github.workspace }}\test-results"
