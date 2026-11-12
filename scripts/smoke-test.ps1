@@ -164,6 +164,7 @@ namespace VeyraRemotePreview {
     }
 }
 catch {
+    $launchStatus = "FAILED"
     $failureMessage = $_.Exception.Message
     Add-Note "STARTUP FAILURE: $failureMessage"
 }
