@@ -96,7 +96,7 @@ jobs:
 
       - name: Launch VEYRA and capture desktop preview
         shell: powershell
-        run: ./scripts/smoke-test.ps1 -PackagePath "${{ github.workspace }}\\package" -ResultsPath "${{ github.workspace }}\\test-results"
+        run: ./scripts/smoke-test.ps1 -PackagePath "${{ github.workspace }}\package" -ResultsPath "${{ github.workspace }}\test-results"
 
       - name: Upload remote preview and diagnostics
         if: always()
