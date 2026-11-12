@@ -39,9 +39,30 @@ try {
 
     $exePath = $executables[0].FullName
     $PackagePath = $executables[0].Directory.FullName
-    Add-Note "Found packaged executable: $exePath"
+    $bootstrapPath = Join-Path $PackagePath "bootstrap.exe"
+    $iconPath = Join-Path $PackagePath "VEYRA.ico"
+    $dllPath = Join-Path $PackagePath "VEYRA.dll"
+    if (-not (Test-Path -LiteralPath $bootstrapPath -PathType Leaf)) {
+        throw "The original CEF bootstrap.exe was not included in the package."
+    }
+    if (-not (Test-Path -LiteralPath $iconPath -PathType Leaf)) {
+        throw "VEYRA.ico was not included beside the launcher."
+    }
+    if (-not (Test-Path -LiteralPath $dllPath -PathType Leaf)) {
+        throw "VEYRA.dll was not found beside the CEF bootstrap."
+    }
+
+    $bootstrapHash = (Get-FileHash -LiteralPath $bootstrapPath -Algorithm SHA256).Hash
+    $renamedHash = (Get-FileHash -LiteralPath $exePath -Algorithm SHA256).Hash
+    if ($bootstrapHash -ne $renamedHash) {
+        throw "VEYRA.exe is not byte-for-byte identical to the original CEF bootstrap."
+    }
+
+    Add-Note "Found original CEF bootstrap: $bootstrapPath"
+    Add-Note "Verified VEYRA.exe has the same SHA-256 as bootstrap.exe: $bootstrapHash"
+    Add-Note "Found VEYRA.dll and sidecar icon: $iconPath"
     Add-Note "Using executable directory as working directory: $PackagePath"
-    $process = Start-Process -FilePath $exePath -WorkingDirectory $PackagePath -PassThru
+    $process = Start-Process -FilePath $bootstrapPath -ArgumentList "--module=VEYRA" -WorkingDirectory $PackagePath -PassThru
     Add-Note "Started VEYRA process with PID $($process.Id)."
 
     $deadline = (Get-Date).AddSeconds($StartupTimeoutSeconds)

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(VEYRA VERSION 0.4.0 LANGUAGES CXX RC)
+project(VEYRA VERSION 0.4.1 LANGUAGES CXX RC)
 
 if(NOT WIN32)
   message(FATAL_ERROR "The first VEYRA milestone targets Windows 10/11 x64.")
@@ -73,15 +73,6 @@ find_package(CEF REQUIRED)
 ADD_LOGICAL_TARGET("libcef_lib" "${CEF_LIB_DEBUG}" "${CEF_LIB_RELEASE}")
 add_subdirectory("${CEF_LIBCEF_DLL_WRAPPER_PATH}" libcef_dll_wrapper)
 
-add_executable(VEYRAIconPatcher tools/icon_patcher.cpp)
-target_compile_definitions(VEYRAIconPatcher PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
-if(MSVC)
-  target_compile_options(VEYRAIconPatcher PRIVATE /W4 /permissive- /EHsc /utf-8)
-endif()
-set_target_properties(VEYRAIconPatcher PROPERTIES
-  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tools"
-)
-
 add_library(VEYRA SHARED
   src/main_win.cpp
   src/app_state.cpp
@@ -91,7 +82,6 @@ add_library(VEYRA SHARED
   src/update_manager.cpp
   resources/veyra.rc
 )
-add_dependencies(VEYRA VEYRAIconPatcher)
 target_include_directories(VEYRA PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/generated" "${CEF_ROOT}")
 target_compile_definitions(VEYRA PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX CEF_USE_BOOTSTRAP)
 if(MSVC)
@@ -125,7 +115,8 @@ if(COMMAND COPY_FILES)
 endif()
 add_custom_command(TARGET VEYRA POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CEF_BINARY_DIR}/bootstrap.exe" "$<TARGET_FILE_DIR:VEYRA>/VEYRA.exe"
-  COMMAND "$<TARGET_FILE:VEYRAIconPatcher>" "$<TARGET_FILE_DIR:VEYRA>/VEYRA.exe" "${CMAKE_CURRENT_SOURCE_DIR}/resources/veyra.ico"
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CEF_BINARY_DIR}/bootstrap.exe" "$<TARGET_FILE_DIR:VEYRA>/bootstrap.exe"
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/resources/veyra.ico" "$<TARGET_FILE_DIR:VEYRA>/VEYRA.ico"
   COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/ui" "$<TARGET_FILE_DIR:VEYRA>/ui"
   COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/generated-ui/version.js" "$<TARGET_FILE_DIR:VEYRA>/ui/version.js"
   COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:VEYRA>/scripts"

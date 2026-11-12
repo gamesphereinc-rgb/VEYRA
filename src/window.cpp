@@ -104,6 +104,22 @@ void WindowControl(Graphics& g, int x, int control, bool maximized) {
   }
 }
 
+HICON LoadVeyraWindowIcon(int width, int height) {
+  wchar_t executablePath[MAX_PATH]{};
+  const DWORD length = GetModuleFileNameW(nullptr, executablePath, MAX_PATH);
+  if (length == 0 || length >= MAX_PATH) return nullptr;
+
+  std::wstring iconPath(executablePath, length);
+  const size_t separator = iconPath.find_last_of(L"\\/");
+  if (separator == std::wstring::npos) return nullptr;
+  iconPath.resize(separator + 1);
+  iconPath += L"VEYRA.ico";
+
+  return static_cast<HICON>(LoadImageW(
+      nullptr, iconPath.c_str(), IMAGE_ICON, width, height,
+      LR_LOADFROMFILE | LR_DEFAULTCOLOR));
+}
+
 void NotifyUpdateFailed(int browserId) {
   AppState::Get().NotifyTabUpdateFailed(browserId);
 }
@@ -631,8 +647,8 @@ HWND CreateVeyraWindow(HINSTANCE instance,int showCommand) {
   GdiplusStartupInput startup;GdiplusStartup(&g_gdiplusToken,&startup,nullptr);
   WNDCLASSEXW wc{};wc.cbSize=sizeof(wc);wc.style=CS_HREDRAW|CS_VREDRAW;wc.lpfnWndProc=Proc;
   wc.hInstance=instance;wc.hCursor=LoadCursorW(nullptr,IDC_ARROW);
-  wc.hIcon=static_cast<HICON>(LoadImageW(instance,MAKEINTRESOURCEW(1),IMAGE_ICON,32,32,LR_DEFAULTCOLOR|LR_SHARED));
-  wc.hIconSm=static_cast<HICON>(LoadImageW(instance,MAKEINTRESOURCEW(1),IMAGE_ICON,16,16,LR_DEFAULTCOLOR|LR_SHARED));
+  wc.hIcon=LoadVeyraWindowIcon(32,32);
+  wc.hIconSm=LoadVeyraWindowIcon(16,16);
   if(!wc.hIcon)wc.hIcon=LoadIconW(nullptr,IDI_APPLICATION);
   if(!wc.hIconSm)wc.hIconSm=wc.hIcon;
   wc.lpszClassName=kClassName;

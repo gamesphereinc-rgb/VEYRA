@@ -2,7 +2,7 @@
 
 **Browse beyond.**
 
-**Current development version: 0.4.0**
+**Current development version: 0.4.1**
 
 VEYRA is an independent Windows browser with its own native interface and visual identity, powered by Chromium through the Chromium Embedded Framework (CEF).
 
@@ -18,20 +18,18 @@ VEYRA is not an Electron app and does not use Microsoft Edge WebView2. Its Windo
 
 The Windows build produces two packages:
 
-- **VEYRA-Setup-x64** — a normal setup wizard. Download the artifact, extract its ZIP, and run the included `VEYRA-Setup-0.4.0-x64.exe`. Choose the install location and whether to create a desktop shortcut. VEYRA is installed for the current Windows user, without requiring administrator access.
-- **VEYRA-windows-x64** — a portable ZIP for people who prefer not to install the browser. Extract the complete folder and run `VEYRA.exe` from inside it.
+- **VEYRA-Setup-x64** — a normal setup wizard. Download the artifact, extract its ZIP, and run the included `VEYRA-Setup-0.4.1-x64.exe`. Choose the install location and whether to create a desktop shortcut. VEYRA is installed for the current Windows user, without requiring administrator access.
+- **VEYRA-windows-x64** — a portable ZIP for people who prefer not to install the browser. Extract the complete folder and run `VEYRA.exe` from inside it. The package also includes the original `bootstrap.exe`, which can be run with `--module=VEYRA` for a direct test of CEF's unmodified launcher.
 
 The installer creates a Start Menu shortcut and registers VEYRA with Windows so it can be removed from **Settings → Apps → Installed apps**. It does not delete your browser profile during uninstall; profile data remains in your Local AppData folder.
 
 To download a test installer, open the newest successful **Windows build** run on the `main` branch, scroll down to **Artifacts**, download **VEYRA-Setup-x64**, extract it, and run the setup EXE. Both packages include the full Chromium runtime. Keep the portable files together if you use that option.
 
-Test-build artifacts expire after 14 days. These development builds are not code-signed, so Windows may show an unknown-publisher or SmartScreen warning. Only download builds from this official repository.
-
-These development builds are not code-signed, so Windows may show an unknown-publisher or SmartScreen warning. Only download builds from this official repository, and remember that this is unfinished software.
+Test-build artifacts expire after 14 days. These development builds are not code-signed, so Windows may show a Windows security warning. Keeping the CEF bootstrap unmodified is a packaging experiment, not a guarantee that Smart App Control will allow the application. Only download builds from this official repository.
 
 ## What's included so far
 
-- Native Windows application window and custom VEYRA browser interface, with aligned icons and a branded Windows executable icon.
+- Native Windows application window and custom VEYRA browser interface, with aligned icons and a VEYRA icon loaded from a sidecar file for the window and shortcuts. The CEF bootstrap executable is kept byte-for-byte unchanged.
 - A Windows setup wizard with per-user installation, Start Menu shortcuts, optional desktop shortcut, and an uninstaller.
 - Multiple Chromium tabs.
 - Address bar with HTTPS navigation and DuckDuckGo search.
