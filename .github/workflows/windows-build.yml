@@ -149,7 +149,7 @@ jobs:
           retention-days: 14
 
   publish-release:
-    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.release_tag != '')
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.release_tag != '') || (github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[release]'))
     needs: [build, smoke-test]
     runs-on: windows-2022
     permissions:
@@ -176,18 +176,33 @@ jobs:
           VEYRA_RELEASE_TAG: ${{ inputs.release_tag }}
         shell: pwsh
         run: |
-          $tag = $env:GITHUB_REF_NAME
-          if ($env:GITHUB_EVENT_NAME -eq "workflow_dispatch") {
-            $tag = $env:VEYRA_RELEASE_TAG
-          }
-          if ($tag -notmatch '^v[0-9]+[.][0-9]+[.][0-9]+$') {
-            throw "Release tag must use the format vMAJOR.MINOR.PATCH."
-          }
           $versionMatch = [regex]::Match((Get-Content -LiteralPath "CMakeLists.txt" -Raw), 'project\(VEYRA VERSION (?<version>\d+\.\d+\.\d+)')
           if (-not $versionMatch.Success) {
             throw "Could not read VEYRA's CMake project version."
           }
           $expectedTag = "v" + $versionMatch.Groups["version"].Value
+          if ($env:GITHUB_EVENT_NAME -eq "workflow_dispatch") {
+            $tag = $env:VEYRA_RELEASE_TAG
+          } elseif ($env:GITHUB_EVENT_NAME -eq "push" -and $env:GITHUB_REF -eq "refs/heads/main") {
+            $tag = $expectedTag
+          } elseif ($env:GITHUB_REF -match '^refs/tags/(v.+)
+          $installer = Get-ChildItem -LiteralPath "VEYRA-installer" -Filter "VEYRA-Setup-*-x64.exe" -File | Select-Object -First 1
+          if (-not $installer) { throw "The VEYRA installer artifact is missing." }
+          gh release create "$tag" "VEYRA-windows-x64.zip" $installer.FullName --target "$env:GITHUB_SHA" --title "VEYRA $tag" --notes "Small maintenance release to verify VEYRA's in-app updater. This build includes the 0.4.1 version bump."
+          if ($LASTEXITCODE -ne 0) { throw "GitHub release publication failed." }
+) {
+            $tag = $Matches[1]
+          } else {
+            throw "Release publication was not triggered by an approved release event."
+          }
+          if ($tag -notmatch '^v[0-9]+[.][0-9]+[.][0-9]+
+          $installer = Get-ChildItem -LiteralPath "VEYRA-installer" -Filter "VEYRA-Setup-*-x64.exe" -File | Select-Object -First 1
+          if (-not $installer) { throw "The VEYRA installer artifact is missing." }
+          gh release create "$tag" "VEYRA-windows-x64.zip" $installer.FullName --target "$env:GITHUB_SHA" --title "VEYRA $tag" --notes "Small maintenance release to verify VEYRA's in-app updater. This build includes the 0.4.1 version bump."
+          if ($LASTEXITCODE -ne 0) { throw "GitHub release publication failed." }
+) {
+            throw "Release tag must use the format vMAJOR.MINOR.PATCH."
+          }
           if ($tag -ne $expectedTag) {
             throw "Release tag $tag does not match the source version $expectedTag."
           }
