@@ -133,7 +133,7 @@ add_custom_command(TARGET VEYRA POST_BUILD
   VERBATIM
 )
 find_program(INNO_SETUP_COMPILER NAMES ISCC.exe ISCC
-  PATHS "$ENV{ProgramFiles(x86)}/Inno Setup 6" "$ENV{ProgramFiles}/Inno Setup 6"
+  PATHS "C:/Program Files (x86)/Inno Setup 6" "C:/Program Files/Inno Setup 6"
 )
 if(INNO_SETUP_COMPILER)
   add_custom_target(VEYRAInstaller
