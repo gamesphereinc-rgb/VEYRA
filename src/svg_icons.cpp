@@ -18,6 +18,7 @@
 #include <vector>
 #include <algorithm>
 #include <cstddef>
+#include <cmath>
 
 namespace SvgIcons {
 namespace {
@@ -50,40 +51,79 @@ std::unique_ptr<Gdiplus::Bitmap> LoadIcon(const std::wstring& name) {
     return nullptr;
   }
 
-  const float scale = std::min((kRasterSize - 8.0f) / image->width,
-                               (kRasterSize - 8.0f) / image->height);
-  const float offsetX = (kRasterSize - image->width * scale) * 0.5f;
-  const float offsetY = (kRasterSize - image->height * scale) * 0.5f;
+  constexpr int kSourceSize = 192;
+  const float scale = std::min((kSourceSize - 24.0f) / image->width,
+                               (kSourceSize - 24.0f) / image->height);
+  const float offsetX = (kSourceSize - image->width * scale) * 0.5f;
+  const float offsetY = (kSourceSize - image->height * scale) * 0.5f;
   std::vector<unsigned char> rgba(
-      static_cast<std::size_t>(kRasterSize * kRasterSize * 4), 0);
+      static_cast<std::size_t>(kSourceSize * kSourceSize * 4), 0);
   nsvgRasterize(g_rasterizer, image, offsetX, offsetY, scale,
-               rgba.data(), kRasterSize, kRasterSize, kRasterSize * 4);
+                rgba.data(), kSourceSize, kSourceSize, kSourceSize * 4);
   nsvgDelete(image);
 
-  auto bitmap = std::make_unique<Gdiplus::Bitmap>(
-      kRasterSize, kRasterSize, PixelFormat32bppARGB);
-  if (bitmap->GetLastStatus() != Gdiplus::Ok) return nullptr;
+  auto sourceBitmap = std::make_unique<Gdiplus::Bitmap>(
+      kSourceSize, kSourceSize, PixelFormat32bppARGB);
+  if (sourceBitmap->GetLastStatus() != Gdiplus::Ok) return nullptr;
 
-  Gdiplus::Rect bounds(0, 0, kRasterSize, kRasterSize);
+  Gdiplus::Rect sourceBounds(0, 0, kSourceSize, kSourceSize);
   Gdiplus::BitmapData locked{};
-  if (bitmap->LockBits(&bounds, Gdiplus::ImageLockModeWrite,
-                       PixelFormat32bppARGB, &locked) != Gdiplus::Ok) {
+  if (sourceBitmap->LockBits(&sourceBounds, Gdiplus::ImageLockModeWrite,
+                             PixelFormat32bppARGB, &locked) != Gdiplus::Ok) {
     return nullptr;
   }
-  for (int y = 0; y < kRasterSize; ++y) {
+  int minX = kSourceSize, minY = kSourceSize, maxX = -1, maxY = -1;
+  for (int y = 0; y < kSourceSize; ++y) {
     auto* destination = static_cast<unsigned char*>(locked.Scan0) +
                         static_cast<std::ptrdiff_t>(y) * locked.Stride;
-    for (int x = 0; x < kRasterSize; ++x) {
-      const auto src = static_cast<std::size_t>((y * kRasterSize + x) * 4);
-      const auto dst = static_cast<std::size_t>(x * 4);
-      destination[dst + 0] = rgba[src + 2];
-      destination[dst + 1] = rgba[src + 1];
-      destination[dst + 2] = rgba[src + 0];
-      destination[dst + 3] = rgba[src + 3];
+    for (int x = 0; x < kSourceSize; ++x) {
+      const auto sourceIndex =
+          static_cast<std::size_t>((y * kSourceSize + x) * 4);
+      const auto destinationIndex = static_cast<std::size_t>(x * 4);
+      destination[destinationIndex + 0] = rgba[sourceIndex + 2];
+      destination[destinationIndex + 1] = rgba[sourceIndex + 1];
+      destination[destinationIndex + 2] = rgba[sourceIndex + 0];
+      destination[destinationIndex + 3] = rgba[sourceIndex + 3];
+      if (rgba[sourceIndex + 3] > 8) {
+        minX = std::min(minX, x);
+        minY = std::min(minY, y);
+        maxX = std::max(maxX, x);
+        maxY = std::max(maxY, y);
+      }
     }
   }
-  bitmap->UnlockBits(&locked);
-  return bitmap;
+  sourceBitmap->UnlockBits(&locked);
+  if (maxX < minX || maxY < minY) return nullptr;
+
+  // Centre the visible alpha bounds, not the SVG viewBox. This compensates for
+  // icons whose paths have different internal whitespace.
+  const int visibleWidth = maxX - minX + 1;
+  const int visibleHeight = maxY - minY + 1;
+  const float outputScale = std::min((kRasterSize - 16.0f) / visibleWidth,
+                                     (kRasterSize - 16.0f) / visibleHeight);
+  const float drawWidth = visibleWidth * outputScale;
+  const float drawHeight = visibleHeight * outputScale;
+  const Gdiplus::RectF destination(
+      (kRasterSize - drawWidth) * 0.5f,
+      (kRasterSize - drawHeight) * 0.5f,
+      drawWidth, drawHeight);
+  const Gdiplus::Rect sourceRect(minX, minY, visibleWidth, visibleHeight);
+
+  auto result = std::make_unique<Gdiplus::Bitmap>(
+      kRasterSize, kRasterSize, PixelFormat32bppARGB);
+  if (result->GetLastStatus() != Gdiplus::Ok) return nullptr;
+  Gdiplus::Graphics graphics(result.get());
+  graphics.SetInterpolationMode(Gdiplus::InterpolationModeHighQualityBicubic);
+  graphics.SetPixelOffsetMode(Gdiplus::PixelOffsetModeHighQuality);
+  if (graphics.DrawImage(sourceBitmap.get(), destination,
+                         static_cast<Gdiplus::REAL>(minX),
+                         static_cast<Gdiplus::REAL>(minY),
+                         static_cast<Gdiplus::REAL>(visibleWidth),
+                         static_cast<Gdiplus::REAL>(visibleHeight),
+                         Gdiplus::UnitPixel) != Gdiplus::Ok) {
+    return nullptr;
+  }
+  return result;
 }
 }
 
@@ -107,9 +147,15 @@ bool Draw(Gdiplus::Graphics& graphics, const wchar_t* name,
   Gdiplus::ImageAttributes attributes;
   attributes.SetColorMatrix(&matrix, Gdiplus::ColorMatrixFlagsDefault,
                             Gdiplus::ColorAdjustTypeBitmap);
-  return graphics.DrawImage(found->second.get(), destination, 0.0f, 0.0f,
-      static_cast<float>(kRasterSize), static_cast<float>(kRasterSize),
-      Gdiplus::UnitPixel, &attributes) == Gdiplus::Ok;
+  const auto state = graphics.Save();
+  graphics.SetInterpolationMode(Gdiplus::InterpolationModeHighQualityBicubic);
+  graphics.SetPixelOffsetMode(Gdiplus::PixelOffsetModeHighQuality);
+  const auto status = graphics.DrawImage(found->second.get(), destination,
+      0.0f, 0.0f, static_cast<float>(kRasterSize),
+      static_cast<float>(kRasterSize), Gdiplus::UnitPixel, &attributes);
+  graphics.Restore(state);
+  return status == Gdiplus::Ok;
+}
 }
 
 void Shutdown() {

@@ -68,11 +68,18 @@ void VMark(Graphics& g,float x,float y) {
   LinearGradientBrush brush(PointF(x,y),PointF(x+28,y+28),Color(255,114,236,203),Color(255,124,157,255));
   Pen mark(&brush,4); mark.SetStartCap(LineCapRound); mark.SetEndCap(LineCapRound); g.DrawLines(&mark,pts,3);
 }
+void DrawIconCentered(Graphics& g,const wchar_t* icon,const RectF& bounds,
+                      float iconSize,BYTE opacity=255) {
+  const float size=std::min(iconSize,std::min(bounds.Width,bounds.Height));
+  const RectF target(bounds.X+(bounds.Width-size)*0.5f,
+                     bounds.Y+(bounds.Height-size)*0.5f,size,size);
+  SvgIcons::Draw(g,icon,target,opacity);
+}
 void Button(Graphics& g,int x,int y,const wchar_t* icon,bool enabled) {
   Round(g,RectF((REAL)x,(REAL)y,36.0f,36.0f),11.0f,
         enabled?Color(255,24,38,55):Color(100,20,31,45));
-  SvgIcons::Draw(g,icon,RectF((REAL)x+9.0f,(REAL)y+9.0f,18.0f,18.0f),
-                 enabled?255:105);
+  DrawIconCentered(g,icon,RectF((REAL)x,(REAL)y,36.0f,36.0f),18.0f,
+                   enabled?255:105);
 }
 void WindowControl(Graphics& g, int x, int control, bool maximized) {
   const bool hovered = g_hoveredWindowControl == control;
@@ -85,8 +92,8 @@ void WindowControl(Graphics& g, int x, int control, bool maximized) {
   const wchar_t* icon = control == 0 ? L"window-minimize" :
       (control == 1 ? (maximized ? L"window-restore" : L"window-maximize") :
                       L"window-close");
-  SvgIcons::Draw(g,icon,RectF((REAL)x+14.0f,11.0f,18.0f,18.0f),
-                 hovered?255:220);
+  DrawIconCentered(g,icon,RectF((REAL)x,0.0f,46.0f,44.0f),18.0f,
+                   hovered?255:220);
 
   if (control == 0) {
     HitAdd(x, 0, 46, 44, Action::MinimizeWindow);
@@ -149,14 +156,14 @@ void Paint(HWND hwnd,HDC hdc) {
     else {SolidBrush dot(selected?Color(255,112,231,207):Color(255,91,119,146));g.FillEllipse(&dot,(REAL)x+16.0f,21.0f,6.0f,6.0f);}
     Label(g,t.title.empty()?L"New tab":t.title,(float)x+34,8,(float)tw-70,32,10,
           selected?Color(255,232,241,250):Color(255,154,174,193));
-    SvgIcons::Draw(g,L"close",RectF((REAL)x+(REAL)tw-27.0f,15.0f,14.0f,14.0f),190);
+    DrawIconCentered(g,L"close",RectF((REAL)x+(REAL)tw-30.0f,7.0f,25.0f,34.0f),14.0f,190);
     HitAdd(x,6,tw-5,36,Action::ActivateTab,t.id);
     HitAdd(x+tw-30,7,25,34,Action::CloseTab,t.id);
     x+=tw;
   }
   const int plus=std::min(w-46,x+4);
   Round(g,RectF((REAL)plus,10,28,28),9,Color(70,86,130,153));
-  SvgIcons::Draw(g,L"plus",RectF((REAL)plus+6.0f,16.0f,16.0f,16.0f),235);
+  DrawIconCentered(g,L"plus",RectF((REAL)plus,10.0f,28.0f,28.0f),16.0f,235);
   HitAdd(plus,8,30,32,Action::NewTab);
 
   const auto* tab=AppState::Get().ActiveTab();
@@ -172,13 +179,13 @@ void Paint(HWND hwnd,HDC hdc) {
   Pen border(Color(255,42,61,81),1);
   GraphicsPath p; p.AddArc((REAL)left,56.0f,26.0f,26.0f,180.0f,90.0f);p.AddArc((REAL)right-26.0f,56.0f,26.0f,26.0f,270.0f,90.0f);
   p.AddArc((REAL)right-26.0f,70.0f,26.0f,26.0f,0.0f,90.0f);p.AddArc((REAL)left,70.0f,26.0f,26.0f,90.0f,90.0f);p.CloseFigure();g.DrawPath(&border,&p);
-  SvgIcons::Draw(g,tab&&tab->url.rfind(L"https://",0)==0?L"lock":L"globe",
-                 RectF(196.0f,64.0f,16.0f,16.0f),220);
+  DrawIconCentered(g,tab&&tab->url.rfind(L"https://",0)==0?L"lock":L"globe",
+                   RectF((REAL)left+4.0f,56.0f,32.0f,40.0f),16.0f,220);
   const bool saved = tab && AppState::Get().IsBookmarked(tab->url);
   Button(g,w-104,58,saved?L"bookmark-filled":L"bookmark",true);
   HitAdd(w-104,57,38,38,Action::Bookmark);
   Round(g,RectF((REAL)w-58.0f,58.0f,38.0f,36.0f),11.0f,Color(255,23,36,52));
-  SvgIcons::Draw(g,L"more",RectF((REAL)w-49.0f,67.0f,20.0f,20.0f),225);
+  DrawIconCentered(g,L"more",RectF((REAL)w-58.0f,58.0f,38.0f,36.0f),20.0f,225);
   HitAdd(w-58,57,38,38,Action::Menu);
 
   // VEYRA's own frameless window controls. No stock Windows caption buttons.
@@ -289,8 +296,8 @@ void PaintMenu(HWND hwnd,HDC dc) {
     if(i==g_menuHover)
       Round(g,RectF(10.0f,(REAL)top+1.0f,(REAL)width-20.0f,34.0f),8.0f,
             Color(255,30,48,65));
-    SvgIcons::Draw(g,item.icon.c_str(),RectF(20.0f,(REAL)top+10.0f,16.0f,16.0f),
-                   i==g_menuHover?255:190);
+    DrawIconCentered(g,item.icon.c_str(),RectF(10.0f,(REAL)top,36.0f,37.0f),16.0f,
+                     i==g_menuHover?255:190);
     Label(g,item.label,47.0f,(REAL)top+1.0f,(REAL)width-61.0f,35.0f,10.5f,
           i==g_menuHover?Color(255,241,248,252):Color(255,190,207,221));
   }
@@ -623,8 +630,12 @@ HWND CreateVeyraWindow(HINSTANCE instance,int showCommand) {
   RegisterMenuClass(instance);
   GdiplusStartupInput startup;GdiplusStartup(&g_gdiplusToken,&startup,nullptr);
   WNDCLASSEXW wc{};wc.cbSize=sizeof(wc);wc.style=CS_HREDRAW|CS_VREDRAW;wc.lpfnWndProc=Proc;
-  wc.hInstance=instance;wc.hCursor=LoadCursorW(nullptr,IDC_ARROW);wc.hIcon=LoadIconW(nullptr,IDI_APPLICATION);
-  wc.hIconSm=wc.hIcon;wc.lpszClassName=kClassName;
+  wc.hInstance=instance;wc.hCursor=LoadCursorW(nullptr,IDC_ARROW);
+  wc.hIcon=static_cast<HICON>(LoadImageW(instance,MAKEINTRESOURCEW(1),IMAGE_ICON,32,32,LR_DEFAULTCOLOR|LR_SHARED));
+  wc.hIconSm=static_cast<HICON>(LoadImageW(instance,MAKEINTRESOURCEW(1),IMAGE_ICON,16,16,LR_DEFAULTCOLOR|LR_SHARED));
+  if(!wc.hIcon)wc.hIcon=LoadIconW(nullptr,IDI_APPLICATION);
+  if(!wc.hIconSm)wc.hIconSm=wc.hIcon;
+  wc.lpszClassName=kClassName;
   if(!RegisterClassExW(&wc)&&GetLastError()!=ERROR_CLASS_ALREADY_EXISTS)return nullptr;
   const DWORD windowStyle = WS_POPUP | WS_THICKFRAME | WS_MINIMIZEBOX |
                             WS_MAXIMIZEBOX | WS_SYSMENU;
