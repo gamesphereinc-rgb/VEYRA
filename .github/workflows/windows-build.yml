@@ -199,5 +199,5 @@ jobs:
           }
           $installer = Get-ChildItem -LiteralPath "VEYRA-installer" -Filter "VEYRA-Setup-*-x64.exe" -File | Select-Object -First 1
           if (-not $installer) { throw "The VEYRA installer artifact is missing." }
-          gh release create "$tag" "VEYRA-windows-x64.zip" $installer.FullName --target "$env:GITHUB_SHA" --title "VEYRA $tag" --notes "Small maintenance release to verify VEYRA's in-app updater. This build includes the $($versionMatch.Groups['version'].Value) version bump."
+          gh release create "$tag" "VEYRA-windows-x64.zip" $installer.FullName --title "VEYRA $tag" --notes "Small maintenance release to verify VEYRA's in-app updater. This build includes the $($versionMatch.Groups['version'].Value) version bump."
           if ($LASTEXITCODE -ne 0) { throw "GitHub release publication failed." }
