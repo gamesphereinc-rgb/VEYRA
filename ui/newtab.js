@@ -19,6 +19,12 @@
   const resetWallpaper = document.getElementById("reset-wallpaper");
   const updateButton = document.getElementById("check-updates");
   const updateStatus = document.getElementById("update-status");
+  const versionPattern = /^\d+\.\d+\.\d+$/;
+  const appVersion = typeof window.VEYRA_VERSION === "string" &&
+    versionPattern.test(window.VEYRA_VERSION) ? window.VEYRA_VERSION : "0.3.0";
+  const versionLabel = document.getElementById("veyra-version");
+  if (versionLabel) versionLabel.textContent = appVersion;
+
   const searchEngines = {
     duckduckgo:"https://duckduckgo.com/?q=", google:"https://www.google.com/search?q=",
     bing:"https://www.bing.com/search?q=", brave:"https://search.brave.com/search?q="
@@ -51,13 +57,48 @@
     if(searchEngine)searchEngine.value=prefs.searchEngine||"duckduckgo";
     document.querySelectorAll(".wallpaper-option").forEach(button=>button.classList.toggle("active",button.dataset.wallpaper===wallpaper));
   }
+  const settingsNav = Array.from(document.querySelectorAll("[data-settings-nav]"));
+  const settingsSections = settingsNav
+    .map(link => document.getElementById(link.dataset.settingsNav))
+    .filter(Boolean);
+
+  function setActiveSettingsSection(id) {
+    settingsNav.forEach(link => {
+      const active = link.dataset.settingsNav === id;
+      link.classList.toggle("active", active);
+      if (active) link.setAttribute("aria-current", "location");
+      else link.removeAttribute("aria-current");
+    });
+  }
+
+  function syncSettingsNavigation() {
+    if (settingsView.hidden || settingsSections.length === 0) return;
+    const marker = Math.min(190, Math.max(110, window.innerHeight * 0.3));
+    let current = settingsSections[0];
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    settingsSections.forEach(section => {
+      const rect = section.getBoundingClientRect();
+      const distance = marker < rect.top ? rect.top - marker
+        : marker > rect.bottom ? marker - rect.bottom : 0;
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        current = section;
+      }
+    });
+    setActiveSettingsSection(current.id);
+  }
+
   function showSettings(show){
     document.querySelector(".welcome").classList.toggle("hidden",show);
     settingsView.hidden=!show;
     document.querySelector(".footer").classList.toggle("hidden",show);
     settingsButton.setAttribute("aria-expanded",String(show));
     history.replaceState(null,"",show?"#settings":location.pathname);
-    if(show){applyPreferences();document.querySelector(".page").scrollTo({top:0,behavior:"smooth"});}
+    if(show){
+      applyPreferences();
+      window.scrollTo({top:0,behavior:"smooth"});
+      window.requestAnimationFrame(syncSettingsNavigation);
+    }
   }
   settingsButton.addEventListener("click",()=>showSettings(true));
   closeSettingsButton.addEventListener("click",()=>showSettings(false));
@@ -81,9 +122,11 @@
     };image.onerror=()=>window.alert("VEYRA couldn't read that image.");image.src=reader.result;};
     reader.onerror=()=>window.alert("VEYRA couldn't read that file.");reader.readAsDataURL(file);
   });
-  document.querySelectorAll("[data-settings-nav]").forEach(link=>link.addEventListener("click",()=>{
-    document.querySelectorAll("[data-settings-nav]").forEach(item=>item.classList.remove("active"));link.classList.add("active");
+  settingsNav.forEach(link=>link.addEventListener("click",()=>{
+    setActiveSettingsSection(link.dataset.settingsNav);
   }));
+  window.addEventListener("scroll",syncSettingsNavigation,{passive:true});
+  window.addEventListener("resize",syncSettingsNavigation);
   let availableUpdate = null;
   let releasePage = null;
   window.VEYRAUpdateFailed = function () {
@@ -115,11 +158,11 @@
         const release=await response.json();
         const tag=String(release.tag_name||"").replace(/^v/i,"");
         const parts=tag.split(".").map(value=>Number.parseInt(value,10)||0);
-        const current=[0,2,0];
+        const current=appVersion.split(".").map(value=>Number.parseInt(value,10)||0);
         let newer=false;
         for(let i=0;i<3;i++){if((parts[i]||0)>current[i]){newer=true;break;}if((parts[i]||0)<current[i])break;}
         if(!newer){
-          updateStatus.textContent="You're running VEYRA 0.2.0. No newer stable version is available.";
+          updateStatus.textContent="You're running VEYRA "+appVersion+". No newer stable version is available.";
           updateButton.textContent="Check again";
         }else{
           const asset=Array.isArray(release.assets)?release.assets.find(item=>item.name==="VEYRA-windows-x64.zip"):null;

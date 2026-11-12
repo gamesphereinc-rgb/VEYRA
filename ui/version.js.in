@@ -1,0 +1,1 @@
+window.VEYRA_VERSION = "@PROJECT_VERSION@";
