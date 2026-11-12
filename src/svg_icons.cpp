@@ -155,7 +155,6 @@ bool Draw(Gdiplus::Graphics& graphics, const wchar_t* name,
   graphics.Restore(state);
   return status == Gdiplus::Ok;
 }
-}
 
 void Shutdown() {
   g_icons.clear();
