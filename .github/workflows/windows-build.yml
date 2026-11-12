@@ -34,9 +34,10 @@ on:
         required: false
         type: string
 
+# Keep one Windows build per ref at a time, but queue newer runs instead of cancelling the active build.
 concurrency:
   group: veyra-windows-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
