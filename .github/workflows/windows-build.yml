@@ -180,7 +180,7 @@ jobs:
           if ($env:GITHUB_EVENT_NAME -eq "workflow_dispatch") {
             $tag = $env:VEYRA_RELEASE_TAG
           }
-          if ($tag -notmatch '^v\d+\.\d+\.\d+) {
+          if ($tag -notmatch '^v[0-9]+[.][0-9]+[.][0-9]+$') {
             throw "Release tag must use the format vMAJOR.MINOR.PATCH."
           }
           $versionMatch = [regex]::Match((Get-Content -LiteralPath "CMakeLists.txt" -Raw), 'project\(VEYRA VERSION (?<version>\d+\.\d+\.\d+)')
