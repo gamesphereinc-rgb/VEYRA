@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(VEYRA VERSION 0.2.0 LANGUAGES CXX RC)
+project(VEYRA VERSION 0.3.0 LANGUAGES CXX RC)
 
 if(NOT WIN32)
   message(FATAL_ERROR "The first VEYRA milestone targets Windows 10/11 x64.")
@@ -8,6 +8,13 @@ endif()
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/generated-ui")
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/generated")
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/ui/version.js.in"
+               "${CMAKE_BINARY_DIR}/generated-ui/version.js" @ONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/veyra_version.h.in"
+               "${CMAKE_BINARY_DIR}/generated/veyra_version.h" @ONLY)
 
 set(CEF_VERSION "154.0.34+g14c5a08+chromium-154.0.8037.98" CACHE STRING "Pinned stable CEF release")
 if(NOT DEFINED CEF_ROOT)
@@ -54,7 +61,7 @@ add_library(VEYRA SHARED
   src/update_manager.cpp
   resources/veyra.rc
 )
-target_include_directories(VEYRA PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" "${CEF_ROOT}")
+target_include_directories(VEYRA PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/generated" "${CEF_ROOT}")
 target_compile_definitions(VEYRA PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX CEF_USE_BOOTSTRAP)
 if(MSVC)
   target_compile_options(VEYRA PRIVATE /W4 /permissive- /EHsc /utf-8)
@@ -85,6 +92,7 @@ endif()
 add_custom_command(TARGET VEYRA POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CEF_BINARY_DIR}/bootstrap.exe" "$<TARGET_FILE_DIR:VEYRA>/VEYRA.exe"
   COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/ui" "$<TARGET_FILE_DIR:VEYRA>/ui"
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/generated-ui/version.js" "$<TARGET_FILE_DIR:VEYRA>/ui/version.js"
   COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:VEYRA>/scripts"
   COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/scripts/apply-update.ps1" "$<TARGET_FILE_DIR:VEYRA>/scripts/apply-update.ps1"
   VERBATIM

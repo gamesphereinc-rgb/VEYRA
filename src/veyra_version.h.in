@@ -1,0 +1,2 @@
+#pragma once
+#define VEYRA_VERSION L"@PROJECT_VERSION@"

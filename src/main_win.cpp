@@ -33,8 +33,18 @@ int RunMain(HINSTANCE instance, int showCommand, void* sandboxInfo) {
   const int childExit = CefExecuteProcess(args,app,sandboxInfo);
   if(childExit>=0)return childExit;
 
+  // VEYRA must never silently fall back to an unsandboxed browser process.
+  // The packaged bootstrap launcher is responsible for supplying this handle.
+  if (!sandboxInfo) {
+    MessageBoxW(nullptr,
+        L"VEYRA could not start because Chromium's security sandbox is unavailable. "
+        L"Please reinstall or download the official package.",
+        L"VEYRA security startup error", MB_OK | MB_ICONERROR);
+    return 1;
+  }
+
   CefSettings settings;
-  settings.no_sandbox = sandboxInfo == nullptr;
+  settings.no_sandbox = false;
   settings.multi_threaded_message_loop = false;
   settings.windowless_rendering_enabled = false;
   settings.persist_session_cookies = true;

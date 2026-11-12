@@ -145,6 +145,7 @@ bool BrowserClient::OnPreKeyEvent(CefRefPtr<CefBrowser>, const CefKeyEvent& even
       case 'L': message = WM_VEYRA_FOCUS_ADDRESS; break;
       case 'R': message = WM_VEYRA_RELOAD; break;
       case 'D': message = WM_VEYRA_BOOKMARK; break;
+      case VK_OEM_COMMA: message = WM_VEYRA_SETTINGS; break;
       default: return false;
     }
   } else if (key == VK_F5) {

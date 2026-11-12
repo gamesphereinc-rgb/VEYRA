@@ -2,6 +2,8 @@
 
 **Browse beyond.**
 
+**Current development version: 0.3.0**
+
 VEYRA is an independent Windows browser with its own native interface and visual identity, powered by Chromium through the Chromium Embedded Framework (CEF).
 
 VEYRA is not an Electron app and does not use Microsoft Edge WebView2. Its Windows download includes the VEYRA application and the CEF/Chromium runtime it needs.
@@ -37,7 +39,8 @@ These development builds are not code-signed, so Windows may show an unknown-pub
 - Address bar with HTTPS navigation and DuckDuckGo search.
 - Back, forward, reload, stop, and home controls.
 - Redesigned VEYRA new-tab page with web search, editable local shortcuts, date, and clock.
-- In-page Settings for themes, search engine choice, and built-in or custom new-tab backgrounds.
+- In-page Settings with scroll-aware section navigation, themes, search engine choice, and built-in or custom new-tab backgrounds.
+- Compact new-tab layout on shorter desktop windows, keeping search and shortcuts in view.
 - Custom SVG toolbar icons, a custom browser popup menu, and a double-buffered native chrome paint path.
 - Release checking and a verified updater flow for published GitHub releases; stable releases are published from version tags.
 - Persistent bookmarks and browsing history stored in the local VEYRA profile.
@@ -46,7 +49,7 @@ These development builds are not code-signed, so Windows may show an unknown-pub
 - Chromium's CEF bootstrap architecture for the Windows sandbox.
 - Pop-up requests open in VEYRA tabs.
 
-Keyboard shortcuts: **Ctrl+T** new tab, **Ctrl+W** close tab, **Ctrl+L** focus address bar, **Ctrl+R** reload, **F5** reload, **Alt+Left** back, and **Alt+Right** forward.
+Keyboard shortcuts: **Ctrl+T** new tab, **Ctrl+W** close tab, **Ctrl+L** focus address bar, **Ctrl+R** reload, **Ctrl+,** open Settings from any tab, **Escape** close Settings, **F5** reload, **Alt+Left** back, and **Alt+Right** forward.
 
 ## Still being developed
 
