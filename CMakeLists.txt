@@ -37,9 +37,9 @@ file(TO_CMAKE_PATH "${CMAKE_BINARY_DIR}/installer" VEYRA_INSTALLER_DIRECTORY)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/installer/veyra.iss.in"
                "${CMAKE_BINARY_DIR}/veyra.iss" @ONLY)
 
-set(CEF_VERSION "154.0.34+g14c5a08+chromium-154.0.8037.98" CACHE STRING "Pinned stable CEF release")
+set(CEF_VERSION "156.0.7+g47dbc1d+chromium-156.0.8078.17" CACHE STRING "Pinned CEF beta build for Chromium 156 testing")
 if(NOT DEFINED CEF_ROOT)
-  set(CEF_ROOT "${CMAKE_SOURCE_DIR}/third_party/cef/cef_binary_${CEF_VERSION}_windows64_minimal" CACHE PATH "Extracted minimal CEF distribution")
+  set(CEF_ROOT "${CMAKE_SOURCE_DIR}/third_party/cef/cef_binary_${CEF_VERSION}_windows64_beta_minimal" CACHE PATH "Extracted minimal CEF distribution")
 endif()
 if(NOT EXISTS "${CEF_ROOT}/cmake/FindCEF.cmake")
   message(FATAL_ERROR "CEF not found. Run powershell -ExecutionPolicy Bypass -File scripts/setup.ps1")
