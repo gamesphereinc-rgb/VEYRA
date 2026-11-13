@@ -95,10 +95,11 @@ bool BrowserClient::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
   }
 
   if (url == L"veyra://clear-history") {
-    AppState::Get().ClearHistory();
-    frame->ExecuteJavaScript(
-        L"if (typeof window.VEYRAHistoryCleared === 'function') window.VEYRAHistoryCleared();",
-        current, 0);
+    // OnBeforeBrowse runs on CEF's IO thread. Let the Win32 UI thread update
+    // the saved history and notify the page instead of touching AppState here.
+    const HWND window = AppState::Get().MainWindow();
+    if (window) PostMessageW(window, WM_VEYRA_CLEAR_HISTORY,
+                             static_cast<WPARAM>(browser->GetIdentifier()), 0);
     return true;
   }
 
