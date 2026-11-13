@@ -454,7 +454,15 @@ LRESULT CALLBACK Proc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
       }
       LayoutAddressEdit(hwnd);return 0;
     }
-    case WM_SIZE:LayoutAddressEdit(hwnd);AppState::Get().ResizeTabs();InvalidateRect(hwnd,nullptr,FALSE);return 0;
+    case WM_SIZE: {
+      LayoutAddressEdit(hwnd);
+      AppState::Get().ResizeTabs();
+      RECT chrome{};
+      GetClientRect(hwnd, &chrome);
+      chrome.bottom = std::min<LONG>(chrome.bottom, kChromeHeight);
+      InvalidateRect(hwnd, &chrome, FALSE);
+      return 0;
+    }
     case WM_MOUSEMOVE: {
       TRACKMOUSEEVENT tracking{sizeof(tracking), TME_LEAVE, hwnd, 0};
       TrackMouseEvent(&tracking);
@@ -562,6 +570,10 @@ LRESULT CALLBACK Proc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
       if (!AppState::Get().AddBookmark()) MessageBeep(MB_ICONWARNING);
       InvalidateRect(hwnd, nullptr, FALSE);
       return 0;
+    case WM_VEYRA_CLEAR_HISTORY:
+      AppState::Get().ClearHistory();
+      AppState::Get().NotifyHistoryCleared(static_cast<int>(wp));
+      return 0;
     case WM_VEYRA_SETTINGS:AppState::Get().CreateTab(AppState::HomeUrl()+L"#settings");return 0;
     case WM_VEYRA_MENU_COMMAND:{
       const UINT command=static_cast<UINT>(wp);
@@ -645,7 +657,7 @@ HWND CreateVeyraWindow(HINSTANCE instance,int showCommand) {
   INITCOMMONCONTROLSEX controls{sizeof(controls),ICC_STANDARD_CLASSES};InitCommonControlsEx(&controls);
   RegisterMenuClass(instance);
   GdiplusStartupInput startup;GdiplusStartup(&g_gdiplusToken,&startup,nullptr);
-  WNDCLASSEXW wc{};wc.cbSize=sizeof(wc);wc.style=CS_HREDRAW|CS_VREDRAW;wc.lpfnWndProc=Proc;
+  WNDCLASSEXW wc{};wc.cbSize=sizeof(wc);wc.style=0;wc.lpfnWndProc=Proc;
   wc.hInstance=instance;wc.hCursor=LoadCursorW(nullptr,IDC_ARROW);
   wc.hIcon=LoadVeyraWindowIcon(32,32);
   wc.hIconSm=LoadVeyraWindowIcon(16,16);
@@ -653,7 +665,7 @@ HWND CreateVeyraWindow(HINSTANCE instance,int showCommand) {
   if(!wc.hIconSm)wc.hIconSm=wc.hIcon;
   wc.lpszClassName=kClassName;
   if(!RegisterClassExW(&wc)&&GetLastError()!=ERROR_CLASS_ALREADY_EXISTS)return nullptr;
-  const DWORD windowStyle = WS_POPUP | WS_THICKFRAME | WS_MINIMIZEBOX |
+  const DWORD windowStyle = WS_POPUP | WS_CLIPCHILDREN | WS_THICKFRAME | WS_MINIMIZEBOX |
                             WS_MAXIMIZEBOX | WS_SYSMENU;
   HWND hwnd=CreateWindowExW(WS_EX_APPWINDOW,kClassName,L"VEYRA — Browse beyond",
     windowStyle,CW_USEDEFAULT,CW_USEDEFAULT,1280,820,nullptr,nullptr,instance,nullptr);

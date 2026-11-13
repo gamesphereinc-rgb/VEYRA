@@ -14,6 +14,14 @@
   const closeSettingsButton = document.getElementById("close-settings");
   const themeChoice = document.getElementById("theme-choice");
   const searchEngine = document.getElementById("search-engine");
+  const showClockChoice = document.getElementById("show-clock");
+  const showDateChoice = document.getElementById("show-date");
+  const showDefaultShortcutsChoice = document.getElementById("show-default-shortcuts");
+  const showShortcutDescriptionsChoice = document.getElementById("show-shortcut-descriptions");
+  const clearShortcutsButton = document.getElementById("clear-shortcuts");
+  const resetPreferencesButton = document.getElementById("reset-preferences");
+  const clearHistoryButton = document.getElementById("clear-history");
+  const dataActionStatus = document.getElementById("data-action-status");
   const wallpaperUpload = document.getElementById("wallpaper-upload");
   const wallpaperGrid = document.getElementById("wallpaper-grid");
   const resetWallpaper = document.getElementById("reset-wallpaper");
@@ -55,6 +63,13 @@
     }
     if(themeChoice)themeChoice.value=prefs.theme||"dark";
     if(searchEngine)searchEngine.value=prefs.searchEngine||"duckduckgo";
+    if(showClockChoice)showClockChoice.checked=prefs.showClock!==false;
+    if(showDateChoice)showDateChoice.checked=prefs.showDate!==false;
+    if(showDefaultShortcutsChoice)showDefaultShortcutsChoice.checked=prefs.showDefaultShortcuts!==false;
+    if(showShortcutDescriptionsChoice)showShortcutDescriptionsChoice.checked=prefs.showShortcutDescriptions!==false;
+    document.body.classList.toggle("hide-clock",prefs.showClock===false);
+    document.body.classList.toggle("hide-date",prefs.showDate===false);
+    document.body.classList.toggle("hide-shortcut-descriptions",prefs.showShortcutDescriptions===false);
     document.querySelectorAll(".wallpaper-option").forEach(button=>button.classList.toggle("active",button.dataset.wallpaper===wallpaper));
   }
   const settingsNav = Array.from(document.querySelectorAll("[data-settings-nav]"));
@@ -104,6 +119,30 @@
   closeSettingsButton.addEventListener("click",()=>showSettings(false));
   themeChoice.addEventListener("change",()=>savePreferences({theme:themeChoice.value}));
   searchEngine.addEventListener("change",()=>savePreferences({searchEngine:searchEngine.value}));
+  showClockChoice.addEventListener("change",()=>savePreferences({showClock:showClockChoice.checked}));
+  showDateChoice.addEventListener("change",()=>savePreferences({showDate:showDateChoice.checked}));
+  showDefaultShortcutsChoice.addEventListener("change",()=>{
+    savePreferences({showDefaultShortcuts:showDefaultShortcutsChoice.checked});
+    renderShortcuts();
+  });
+  showShortcutDescriptionsChoice.addEventListener("change",()=>savePreferences({showShortcutDescriptions:showShortcutDescriptionsChoice.checked}));
+  clearShortcutsButton.addEventListener("click",()=>{
+    if(!window.confirm("Remove all custom shortcuts from this VEYRA profile?"))return;
+    saveCustomShortcuts([]);
+    renderShortcuts();
+    dataActionStatus.textContent="Your custom shortcuts have been cleared.";
+  });
+  resetPreferencesButton.addEventListener("click",()=>{
+    if(!window.confirm("Reset all new-tab preferences to their defaults?"))return;
+    try{localStorage.removeItem(preferencesKey);}catch(_){}
+    applyPreferences();
+    dataActionStatus.textContent="New-tab preferences have been reset.";
+  });
+  clearHistoryButton.addEventListener("click",()=>{
+    if(!window.confirm("Clear the browsing history list saved by VEYRA? Cookies, site storage, cache and downloads will not be changed."))return;
+    dataActionStatus.textContent="Clearing VEYRA browsing history…";
+    window.location.href="veyra://clear-history";
+  });
   wallpaperGrid.addEventListener("click",event=>{
     const button=event.target.closest("[data-wallpaper]");
     if(button)savePreferences({wallpaper:button.dataset.wallpaper});
@@ -139,6 +178,9 @@
     updateButton.disabled = false;
     updateButton.textContent = availableUpdate ? "Retry download & install" : "Check for updates";
     updateStatus.textContent = "VEYRA couldn't complete the update. You can safely try again.";
+  };
+  window.VEYRAHistoryCleared = function () {
+    if (dataActionStatus) dataActionStatus.textContent = "VEYRA's saved browsing history has been cleared.";
   };
   updateButton.addEventListener("click",async()=>{
     if(releasePage){
@@ -285,8 +327,10 @@
 
   function renderShortcuts() {
     const custom = readCustomShortcuts();
+    const prefs = readPreferences();
     grid.replaceChildren();
-    defaults.forEach(item => grid.append(makeShortcut(item, false, -1)));
+    if (prefs.showDefaultShortcuts !== false)
+      defaults.forEach(item => grid.append(makeShortcut(item, false, -1)));
     custom.forEach((item, index) => grid.append(makeShortcut(item, true, index)));
   }
 
