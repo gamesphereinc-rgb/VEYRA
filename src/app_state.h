@@ -45,6 +45,7 @@ class AppState final {
   void FocusAddress();
   void FocusBrowser();
   void NotifyTabUpdateFailed(int id);
+  void NotifyHistoryCleared(int id);
   void BeginShutdown();
   void ResizeTabs();
   void OnBrowserCreated(CefRefPtr<CefBrowser> browser);
