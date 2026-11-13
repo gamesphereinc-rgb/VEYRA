@@ -145,7 +145,7 @@ if (-not (Test-Path $FindCefFile)) {
     }
 
     if (-not (Test-Path $ArchivePath)) {
-        Write-Host "CEF minimal cache miss: downloading the official Windows x64 distribution (about 167 MB)." -ForegroundColor Yellow
+        Write-Host "CEF 156 beta cache miss: downloading the Windows x64 minimal distribution (about 167 MB)." -ForegroundColor Yellow
         Invoke-Download -Url $BaseUrl -Destination $ArchivePath
     }
     else {
