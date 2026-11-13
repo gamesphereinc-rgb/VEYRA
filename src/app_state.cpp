@@ -263,6 +263,17 @@ void AppState::NotifyTabUpdateFailed(int id) {
     }
   }
 }
+
+void AppState::NotifyHistoryCleared(int id) {
+  if (auto* tab = FindTab(id); tab && tab->browser) {
+    auto frame = tab->browser->GetMainFrame();
+    if (frame) {
+      frame->ExecuteJavaScript(
+          L"if (typeof window.VEYRAHistoryCleared === 'function') window.VEYRAHistoryCleared();",
+          frame->GetURL(), 0);
+    }
+  }
+}
 void AppState::BeginShutdown() {
   if (closing_) return;
   closing_ = true;
