@@ -570,6 +570,10 @@ LRESULT CALLBACK Proc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
       if (!AppState::Get().AddBookmark()) MessageBeep(MB_ICONWARNING);
       InvalidateRect(hwnd, nullptr, FALSE);
       return 0;
+    case WM_VEYRA_CLEAR_HISTORY:
+      AppState::Get().ClearHistory();
+      AppState::Get().NotifyHistoryCleared(static_cast<int>(wp));
+      return 0;
     case WM_VEYRA_SETTINGS:AppState::Get().CreateTab(AppState::HomeUrl()+L"#settings");return 0;
     case WM_VEYRA_MENU_COMMAND:{
       const UINT command=static_cast<UINT>(wp);
@@ -661,7 +665,7 @@ HWND CreateVeyraWindow(HINSTANCE instance,int showCommand) {
   if(!wc.hIconSm)wc.hIconSm=wc.hIcon;
   wc.lpszClassName=kClassName;
   if(!RegisterClassExW(&wc)&&GetLastError()!=ERROR_CLASS_ALREADY_EXISTS)return nullptr;
-  const DWORD windowStyle = WS_POPUP | WS_CLIPCHILDREN | WS_THICKFRAME |
+  const DWORD windowStyle = WS_POPUP | WS_CLIPCHILDREN | WS_THICKFRAME | WS_MINIMIZEBOX |
                             WS_MAXIMIZEBOX | WS_SYSMENU;
   HWND hwnd=CreateWindowExW(WS_EX_APPWINDOW,kClassName,L"VEYRA — Browse beyond",
     windowStyle,CW_USEDEFAULT,CW_USEDEFAULT,1280,820,nullptr,nullptr,instance,nullptr);
