@@ -11,7 +11,15 @@
 #include "src/window.h"
 
 namespace {
-constexpr int kChromeHeight = 116;
+constexpr int kChromeHeight = 108;
+
+void InvalidateChrome(HWND hwnd) {
+  if (!hwnd) return;
+  RECT chrome{};
+  GetClientRect(hwnd, &chrome);
+  chrome.bottom = std::min<LONG>(chrome.bottom, kChromeHeight);
+  InvalidateRect(hwnd, &chrome, FALSE);
+}
 
 std::string Utf8(const std::wstring& text) {
   if (text.empty()) return {};
@@ -302,7 +310,7 @@ void AppState::OnTitleChanged(int id, const std::wstring& title) {
       history->title = t->title;
       SaveBrowserData();
     }
-    InvalidateRect(window_, nullptr, FALSE);
+    InvalidateChrome(window_);
   }
 }
 void AppState::OnAddressChanged(int id, const std::wstring& url) {
@@ -313,7 +321,7 @@ void AppState::OnAddressChanged(int id, const std::wstring& url) {
       const auto shown = url.find(L"newtab.html") != std::wstring::npos ? L"" : url;
       SetWindowTextW(address_edit_, shown.c_str());
     }
-    InvalidateRect(window_, nullptr, FALSE);
+    InvalidateChrome(window_);
   }
 }
 const BrowserTab* AppState::ActiveTab() const {
@@ -333,7 +341,7 @@ void AppState::RefreshChrome() {
     }
     SetWindowTextW(window_, (t->title + L" — VEYRA").c_str());
   }
-  InvalidateRect(window_, nullptr, FALSE);
+  InvalidateChrome(window_);
 }
 void AppState::LayoutTabs() {
   if (!window_) return;
