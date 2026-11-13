@@ -71,8 +71,11 @@ bool BrowserClient::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
     CefRefPtr<CefFrame> frame, CefRefPtr<CefRequest> request, bool, bool) {
   if(!request||!browser||!frame||!frame->IsMain())return false;
   const auto url=request->GetURL().ToWString();
-  if(url.rfind(L"veyra://install-update",0)!=0)return false;
-  const auto current = browser->GetMainFrame()->GetURL().ToWString();
+  if (url.rfind(L"veyra://", 0) != 0) return false;
+
+  // Internal VEYRA actions are accepted only from the trusted local new-tab
+  // page. Ordinary websites cannot invoke browser-data or update actions.
+  const auto current = frame->GetURL().ToWString();
   const auto home = AppState::Get().HomeUrl();
   const bool trustedHome = current == home ||
       (current.size() > home.size() &&
@@ -82,10 +85,24 @@ bool BrowserClient::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
     MessageBeep(MB_ICONWARNING);
     return true;
   }
-  const auto download=QueryParameter(url,L"url");
-  const auto digest=QueryParameter(url,L"sha256");
-  VeyraUpdater::StartDownload(AppState::Get().MainWindow(),
-                               browser->GetIdentifier(), download, digest);
+
+  if (url.rfind(L"veyra://install-update", 0) == 0) {
+    const auto download = QueryParameter(url, L"url");
+    const auto digest = QueryParameter(url, L"sha256");
+    VeyraUpdater::StartDownload(AppState::Get().MainWindow(),
+                                browser->GetIdentifier(), download, digest);
+    return true;
+  }
+
+  if (url == L"veyra://clear-history") {
+    AppState::Get().ClearHistory();
+    frame->ExecuteJavaScript(
+        L"if (typeof window.VEYRAHistoryCleared === 'function') window.VEYRAHistoryCleared();",
+        current, 0);
+    return true;
+  }
+
+  // Do not allow unknown VEYRA pseudo-URLs to escape into network navigation.
   return true;
 }
 
