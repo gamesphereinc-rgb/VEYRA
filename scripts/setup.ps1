@@ -188,6 +188,34 @@ foreach ($RequiredFile in $RequiredFiles) {
 
 Write-Host "CEF minimal runtime ready: $CefRoot" -ForegroundColor Green
 
+# The WinUI 3 module is unpackaged and requires the matching Windows App SDK runtime.
+# Download the official x64 runtime installer and verify Microsoft's Authenticode signature.
+$WinAppRuntimeDirectory = Join-Path $Root "third_party\windows-app-runtime"
+$WinAppRuntimeInstaller = Join-Path $WinAppRuntimeDirectory "WindowsAppRuntimeInstall-x64.exe"
+$WinAppRuntimeUrl = "https://aka.ms/windowsappsdk/2.6/2.6.4/windowsappruntimeinstall-x64.exe"
+New-Item -ItemType Directory -Force -Path $WinAppRuntimeDirectory | Out-Null
+
+if (Test-Path -LiteralPath $WinAppRuntimeInstaller) {
+    $runtimeSignature = Get-AuthenticodeSignature -FilePath $WinAppRuntimeInstaller
+    if ($runtimeSignature.Status -ne "Valid" -or
+        $runtimeSignature.SignerCertificate.Subject -notmatch "Microsoft Corporation") {
+        Remove-Item -LiteralPath $WinAppRuntimeInstaller -Force
+    }
+}
+
+if (-not (Test-Path -LiteralPath $WinAppRuntimeInstaller)) {
+    Invoke-Download -Url $WinAppRuntimeUrl -Destination $WinAppRuntimeInstaller
+}
+
+$runtimeSignature = Get-AuthenticodeSignature -FilePath $WinAppRuntimeInstaller
+if ($runtimeSignature.Status -ne "Valid" -or
+    $runtimeSignature.SignerCertificate.Subject -notmatch "Microsoft Corporation") {
+    Remove-Item -LiteralPath $WinAppRuntimeInstaller -Force -ErrorAction SilentlyContinue
+    throw "Windows App SDK 2.6.4 runtime installer failed Microsoft Authenticode signature verification."
+}
+
+Write-Host "Verified Microsoft Windows App SDK 2.6.4 x64 runtime installer." -ForegroundColor Green
+
 if (-not $SkipConfigure) {
     Write-Host "Configuring Visual Studio 2022 x64..." -ForegroundColor Yellow
     & cmake -S $Root -B (Join-Path $Root "build") -G "Visual Studio 17" -A x64 "-DCEF_ROOT=$CefRoot"

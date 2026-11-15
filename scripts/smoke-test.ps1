@@ -42,6 +42,8 @@ try {
     $bootstrapPath = Join-Path $PackagePath "bootstrap.exe"
     $iconPath = Join-Path $PackagePath "VEYRA.ico"
     $dllPath = Join-Path $PackagePath "VEYRA.dll"
+    $winUiPath = Join-Path $PackagePath "VEYRA.WinUI.dll"
+    $runtimeInstallerPath = Join-Path $PackagePath "WindowsAppRuntimeInstall-x64.exe"
     if (-not (Test-Path -LiteralPath $bootstrapPath -PathType Leaf)) {
         throw "The original CEF bootstrap.exe was not included in the package."
     }
@@ -50,6 +52,12 @@ try {
     }
     if (-not (Test-Path -LiteralPath $dllPath -PathType Leaf)) {
         throw "VEYRA.dll was not found beside the CEF bootstrap."
+    }
+    if (-not (Test-Path -LiteralPath $winUiPath -PathType Leaf)) {
+        throw "VEYRA.WinUI.dll was not included in the portable package."
+    }
+    if (-not (Test-Path -LiteralPath $runtimeInstallerPath -PathType Leaf)) {
+        throw "The Windows App SDK 2.6.4 runtime installer was not included in the portable package."
     }
 
     $bootstrapHash = (Get-FileHash -LiteralPath $bootstrapPath -Algorithm SHA256).Hash
@@ -61,6 +69,14 @@ try {
     Add-Note "Found original CEF bootstrap: $bootstrapPath"
     Add-Note "Verified VEYRA.exe has the same SHA-256 as bootstrap.exe: $bootstrapHash"
     Add-Note "Found VEYRA.dll and sidecar icon: $iconPath"
+
+    Add-Note "Found VEYRA.WinUI.dll and the Microsoft Windows App SDK runtime installer."
+    Add-Note "Installing/verifying the Windows App SDK 2.6.4 x64 runtime before launch."
+    $runtimeProcess = Start-Process -FilePath $runtimeInstallerPath -ArgumentList "--quiet" -Wait -PassThru
+    if ($runtimeProcess.ExitCode -ne 0) {
+        throw "Windows App SDK runtime installation failed with exit code $($runtimeProcess.ExitCode)."
+    }
+    Add-Note "Windows App SDK runtime installer completed successfully."
     Add-Note "Using executable directory as working directory: $PackagePath"
     $process = Start-Process -FilePath $bootstrapPath -ArgumentList "--module=VEYRA" -WorkingDirectory $PackagePath -PassThru
     Add-Note "Started VEYRA process with PID $($process.Id)."

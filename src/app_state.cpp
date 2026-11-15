@@ -15,6 +15,7 @@ constexpr int kChromeHeight = 108;
 
 void InvalidateChrome(HWND hwnd) {
   if (!hwnd) return;
+  RefreshVeyraWinUiChrome();
   RECT chrome{};
   GetClientRect(hwnd, &chrome);
   chrome.bottom = std::min<LONG>(chrome.bottom, kChromeHeight);
@@ -245,6 +246,7 @@ void AppState::RecordHistory(int tabId, const std::wstring& url) {
 }
 
 void AppState::FocusAddress() {
+  if (FocusVeyraWinUiAddress()) return;
   if (address_edit_) { SetFocus(address_edit_); SendMessageW(address_edit_, EM_SETSEL, 0, -1); }
 }
 void AppState::FocusBrowser() {
