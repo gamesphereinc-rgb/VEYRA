@@ -3,6 +3,9 @@
 
 #include <appmodel.h>
 #include <windows.h>
+#ifdef GetCurrentTime
+#undef GetCurrentTime
+#endif
 #include <algorithm>
 #include <functional>
 #include <string>
@@ -164,7 +167,7 @@ void BuildChrome() {
 
   brand.Children().Append(brandName);
   brand.Children().Append(brandTagline);
-  brand.PointerPressed([](UIElement const&, PointerRoutedEventArgs const&) {
+  brand.PointerPressed([](IInspectable const&, PointerRoutedEventArgs const&) {
     if (g_parent) {
       ReleaseCapture();
       SendMessageW(g_parent, WM_NCLBUTTONDOWN, HTCAPTION, 0);
