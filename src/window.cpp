@@ -22,6 +22,7 @@
 #include "src/messages.h"
 #include "src/svg_icons.h"
 #include "src/update_manager.h"
+#include "winui/veyra_winui_api.h"
 #include "veyra_version.h"
 
 using namespace Gdiplus;
@@ -44,6 +45,15 @@ HBRUSH g_editBrush = nullptr;
 HFONT g_editFont = nullptr;
 ULONG_PTR g_gdiplusToken = 0;
 int g_hoveredWindowControl = -1;
+
+HMODULE g_winUiModule = nullptr;
+VeyraWinUiInitializeFn g_winUiInitialize = nullptr;
+VeyraWinUiResizeFn g_winUiResize = nullptr;
+VeyraWinUiSetTabsFn g_winUiSetTabs = nullptr;
+VeyraWinUiSetAddressFn g_winUiSetAddress = nullptr;
+VeyraWinUiFocusAddressFn g_winUiFocusAddress = nullptr;
+VeyraWinUiShutdownFn g_winUiShutdown = nullptr;
+bool g_winUiActive = false;
 
 RECT MakeRect(int x,int y,int w,int h){return RECT{x,y,x+w,y+h};}
 bool Contains(const RECT& r, POINT p){return p.x>=r.left&&p.x<r.right&&p.y>=r.top&&p.y<r.bottom;}
@@ -104,6 +114,64 @@ void WindowControl(Graphics& g, int x, int control, bool maximized) {
   }
 }
 
+bool TryInitializeWinUi(HWND hwnd) {
+  wchar_t executablePath[MAX_PATH]{};
+  const DWORD length = GetModuleFileNameW(nullptr, executablePath, MAX_PATH);
+  if (length == 0 || length >= MAX_PATH) return false;
+
+  std::wstring modulePath(executablePath, length);
+  const size_t separator = modulePath.find_last_of(L"\\/");
+  if (separator == std::wstring::npos) return false;
+  modulePath.resize(separator + 1);
+  modulePath += L"VEYRA.WinUI.dll";
+
+  g_winUiModule = LoadLibraryW(modulePath.c_str());
+  if (!g_winUiModule) return false;
+
+  g_winUiInitialize = reinterpret_cast<VeyraWinUiInitializeFn>(
+      GetProcAddress(g_winUiModule, "VeyraWinUiInitialize"));
+  g_winUiResize = reinterpret_cast<VeyraWinUiResizeFn>(
+      GetProcAddress(g_winUiModule, "VeyraWinUiResize"));
+  g_winUiSetTabs = reinterpret_cast<VeyraWinUiSetTabsFn>(
+      GetProcAddress(g_winUiModule, "VeyraWinUiSetTabs"));
+  g_winUiSetAddress = reinterpret_cast<VeyraWinUiSetAddressFn>(
+      GetProcAddress(g_winUiModule, "VeyraWinUiSetAddress"));
+  g_winUiFocusAddress = reinterpret_cast<VeyraWinUiFocusAddressFn>(
+      GetProcAddress(g_winUiModule, "VeyraWinUiFocusAddress"));
+  g_winUiShutdown = reinterpret_cast<VeyraWinUiShutdownFn>(
+      GetProcAddress(g_winUiModule, "VeyraWinUiShutdown"));
+
+  if (!g_winUiInitialize || !g_winUiResize || !g_winUiSetTabs ||
+      !g_winUiSetAddress || !g_winUiFocusAddress || !g_winUiShutdown) {
+    FreeLibrary(g_winUiModule);
+    g_winUiModule = nullptr;
+    return false;
+  }
+
+  if (FAILED(g_winUiInitialize(hwnd))) {
+    g_winUiShutdown();
+    FreeLibrary(g_winUiModule);
+    g_winUiModule = nullptr;
+    g_winUiInitialize = nullptr;
+    g_winUiResize = nullptr;
+    g_winUiSetTabs = nullptr;
+    g_winUiSetAddress = nullptr;
+    g_winUiFocusAddress = nullptr;
+    g_winUiShutdown = nullptr;
+    return false;
+  }
+
+  g_winUiActive = true;
+  if (g_address) ShowWindow(g_address, SW_HIDE);
+  AppState::Get().SetAddressEdit(nullptr);
+
+  RECT client{};
+  GetClientRect(hwnd, &client);
+  g_winUiResize(std::max(0, static_cast<int>(client.right) - 138), kChromeHeight);
+  return true;
+}
+
+
 HICON LoadVeyraWindowIcon(int width, int height) {
   wchar_t executablePath[MAX_PATH]{};
   const DWORD length = GetModuleFileNameW(nullptr, executablePath, MAX_PATH);
@@ -144,6 +212,18 @@ void OpenDownloadsFolder(HWND owner) {
 
 void Paint(HWND hwnd,HDC hdc) {
   RECT cr{}; GetClientRect(hwnd,&cr); const int w=cr.right;
+  if (g_winUiActive) {
+    Graphics g(hdc);
+    g.SetSmoothingMode(SmoothingModeAntiAlias);
+    LinearGradientBrush bg(Point(0,0),Point(w,kChromeHeight),
+        Color(255,9,15,27),Color(255,14,24,40));
+    g.FillRectangle(&bg,0,0,w,kChromeHeight);
+    g_hits.clear();
+    WindowControl(g, w - 138, 0, IsZoomed(hwnd) != FALSE);
+    WindowControl(g, w - 92, 1, IsZoomed(hwnd) != FALSE);
+    WindowControl(g, w - 46, 2, IsZoomed(hwnd) != FALSE);
+    return;
+  }
   Graphics g(hdc); g.SetSmoothingMode(SmoothingModeAntiAlias); g.SetTextRenderingHint(TextRenderingHintClearTypeGridFit);
   LinearGradientBrush bg(Point(0,0),Point(w,kChromeHeight),Color(255,9,15,27),Color(255,14,24,40));
   g.FillRectangle(&bg,0,0,w,kChromeHeight);
@@ -452,10 +532,17 @@ LRESULT CALLBACK Proc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
         SendMessageW(g_address,EM_SETCUEBANNER,TRUE,(LPARAM)L"Search or enter an address");
         SetWindowSubclass(g_address,AddressProc,1,0);AppState::Get().SetAddressEdit(g_address);
       }
-      LayoutAddressEdit(hwnd);return 0;
+      LayoutAddressEdit(hwnd);
+      TryInitializeWinUi(hwnd);
+      return 0;
     }
     case WM_SIZE: {
       LayoutAddressEdit(hwnd);
+      if (g_winUiActive && g_winUiResize) {
+        RECT client{};
+        GetClientRect(hwnd, &client);
+        g_winUiResize(std::max(0, static_cast<int>(client.right) - 138), kChromeHeight);
+      }
       AppState::Get().ResizeTabs();
       RECT chrome{};
       GetClientRect(hwnd, &chrome);
@@ -552,7 +639,10 @@ LRESULT CALLBACK Proc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
       break;
     }
     case WM_VEYRA_NEW_TAB:AppState::Get().CreateTab();return 0;
-    case WM_VEYRA_CLOSE_TAB:AppState::Get().CloseActiveTab();return 0;
+    case WM_VEYRA_CLOSE_TAB:
+      if (wp) AppState::Get().CloseTab(static_cast<int>(wp));
+      else AppState::Get().CloseActiveTab();
+      return 0;
     case WM_VEYRA_FOCUS_ADDRESS:AppState::Get().FocusAddress();return 0;
     case WM_VEYRA_BACK:AppState::Get().GoBack();return 0;
     case WM_VEYRA_FORWARD:AppState::Get().GoForward();return 0;
@@ -566,6 +656,17 @@ LRESULT CALLBACK Proc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
         AppState::Get().NavigateActive(text);AppState::Get().FocusBrowser();
       }return 0;
     }
+    case WM_VEYRA_NAVIGATE_TEXT: {
+      const auto* text = reinterpret_cast<const wchar_t*>(lp);
+      if (text) {
+        AppState::Get().NavigateActive(text);
+        AppState::Get().FocusBrowser();
+      }
+      return 0;
+    }
+    case WM_VEYRA_ACTIVATE_TAB:
+      AppState::Get().ActivateTab(static_cast<int>(wp));
+      return 0;
     case WM_VEYRA_BOOKMARK:
       if (!AppState::Get().AddBookmark()) MessageBeep(MB_ICONWARNING);
       InvalidateRect(hwnd, nullptr, FALSE);
@@ -620,6 +721,12 @@ LRESULT CALLBACK Proc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
     case WM_VEYRA_CLOSE_READY:DestroyWindow(hwnd);return 0;
     case WM_CLOSE:AppState::Get().BeginShutdown();return 0;
     case WM_DESTROY:
+      if (g_winUiActive && g_winUiShutdown) g_winUiShutdown();
+      g_winUiActive = false;
+      if (g_winUiModule) {
+        FreeLibrary(g_winUiModule);
+        g_winUiModule = nullptr;
+      }
       SvgIcons::Shutdown();
       if(g_gdiplusToken){GdiplusShutdown(g_gdiplusToken);g_gdiplusToken=0;}
       // CefRunMessageLoop owns the application message pump. Signal CEF as
@@ -645,11 +752,38 @@ LRESULT CALLBACK Proc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
 }
 }
 
+void RefreshVeyraWinUiChrome() {
+  if (!g_winUiActive || !g_winUiSetTabs || !g_winUiSetAddress) return;
+
+  const auto& tabs = AppState::Get().Tabs();
+  std::vector<VEYRA_WINUI_TAB> snapshot;
+  snapshot.reserve(tabs.size());
+  for (const auto& tab : tabs) {
+    snapshot.push_back({ tab.id, tab.title.c_str() });
+  }
+
+  const auto* active = AppState::Get().ActiveTab();
+  const int activeId = active ? active->id : -1;
+  g_winUiSetTabs(snapshot.data(), static_cast<unsigned int>(snapshot.size()), activeId);
+
+  const std::wstring address = active &&
+      active->url.find(L"newtab.html") == std::wstring::npos
+      ? active->url : L"";
+  g_winUiSetAddress(address.c_str());
+}
+
+bool FocusVeyraWinUiAddress() {
+  if (!g_winUiActive || !g_winUiFocusAddress) return false;
+  g_winUiFocusAddress();
+  return true;
+}
+
 RECT GetBrowserContentRect(HWND hwnd) {
   RECT r{};GetClientRect(hwnd,&r);return RECT{0,kChromeHeight,r.right,std::max<LONG>(kChromeHeight,r.bottom)};
 }
 void LayoutAddressEdit(HWND hwnd) {
-  if(!g_address)return;RECT r{};GetClientRect(hwnd,&r);
+  if (g_winUiActive || !g_address) return;
+  RECT r{};GetClientRect(hwnd,&r);
   SetWindowPos(g_address,nullptr,218,64,std::max(40,static_cast<int>(r.right)-330),25,
                SWP_NOZORDER|SWP_NOACTIVATE);
 }

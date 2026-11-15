@@ -3,3 +3,5 @@
 RECT GetBrowserContentRect(HWND window);
 HWND CreateVeyraWindow(HINSTANCE instance, int showCommand);
 void LayoutAddressEdit(HWND window);
+void RefreshVeyraWinUiChrome();
+bool FocusVeyraWinUiAddress();

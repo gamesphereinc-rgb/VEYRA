@@ -73,6 +73,38 @@ find_package(CEF REQUIRED)
 ADD_LOGICAL_TARGET("libcef_lib" "${CEF_LIB_DEBUG}" "${CEF_LIB_RELEASE}")
 add_subdirectory("${CEF_LIBCEF_DLL_WRAPPER_PATH}" libcef_dll_wrapper)
 
+# Build the optional WinUI 3 chrome as a native C++/WinRT module.
+# VEYRA keeps its CEF bootstrapper and browser host unchanged; if the
+# Windows App Runtime is unavailable at startup, the legacy chrome remains
+# available as a functional fallback.
+if(MSVC)
+  if(DEFINED CMAKE_VS_MSBUILD_COMMAND AND EXISTS "${CMAKE_VS_MSBUILD_COMMAND}")
+    set(VEYRA_MSBUILD_EXECUTABLE "${CMAKE_VS_MSBUILD_COMMAND}")
+  else()
+    find_program(VEYRA_MSBUILD_EXECUTABLE NAMES MSBuild.exe MSBuild REQUIRED)
+  endif()
+
+  set(VEYRA_WINUI_DLL "${CMAKE_BINARY_DIR}/out/VEYRA.WinUI.dll")
+  add_custom_command(
+    OUTPUT "${VEYRA_WINUI_DLL}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_BINARY_DIR}/out"
+    COMMAND "${VEYRA_MSBUILD_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/winui/VEYRA.WinUI.vcxproj"
+            -restore -m -nologo
+            "/p:Configuration=$<CONFIG>"
+            "/p:Platform=x64"
+            "/p:OutDir=${CMAKE_BINARY_DIR}/out/"
+    DEPENDS
+      "${CMAKE_CURRENT_SOURCE_DIR}/winui/VEYRA.WinUI.vcxproj"
+      "${CMAKE_CURRENT_SOURCE_DIR}/winui/veyra_winui.cpp"
+      "${CMAKE_CURRENT_SOURCE_DIR}/winui/veyra_winui_api.h"
+      "${CMAKE_CURRENT_SOURCE_DIR}/src/messages.h"
+    VERBATIM
+    COMMENT "Building VEYRA's optional WinUI 3 chrome"
+  )
+  add_custom_target(VEYRAWinUI DEPENDS "${VEYRA_WINUI_DLL}")
+endif()
+
 add_library(VEYRA SHARED
   src/main_win.cpp
   src/app_state.cpp
@@ -82,6 +114,10 @@ add_library(VEYRA SHARED
   src/update_manager.cpp
   resources/veyra.rc
 )
+
+if(MSVC)
+  add_dependencies(VEYRA VEYRAWinUI)
+endif()
 target_include_directories(VEYRA PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/generated" "${CEF_ROOT}")
 target_compile_definitions(VEYRA PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX CEF_USE_BOOTSTRAP)
 if(MSVC)
