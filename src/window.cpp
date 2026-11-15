@@ -148,7 +148,15 @@ bool TryInitializeWinUi(HWND hwnd) {
     return false;
   }
 
-  if (FAILED(g_winUiInitialize(hwnd))) {
+  const HRESULT winUiResult = g_winUiInitialize(hwnd);
+  if (FAILED(winUiResult)) {
+    const std::wstring failure =
+        L"VEYRA couldn't initialize its WinUI 3 chrome. (Error " +
+        std::to_wstring(static_cast<unsigned long>(winUiResult)) +
+        L")\n\nThe Windows App SDK 2.6 x64 runtime is required. Run "
+        L"WindowsAppRuntimeInstall-x64.exe from the VEYRA folder, then reopen VEYRA. "
+        L"The classic toolbar will be used for this session.";
+    MessageBoxW(hwnd, failure.c_str(), L"VEYRA — WinUI startup", MB_OK | MB_ICONWARNING);
     g_winUiShutdown();
     FreeLibrary(g_winUiModule);
     g_winUiModule = nullptr;
