@@ -9,9 +9,11 @@
 
 #include <winrt/base.h>
 #include <winrt/Windows.Foundation.h>
+#include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.Graphics.h>
 #include <winrt/Windows.System.h>
 #include <winrt/Windows.UI.h>
+#include <winrt/Microsoft.UI.Content.h>
 #include <winrt/Microsoft.UI.Interop.h>
 #include <winrt/Microsoft.UI.Dispatching.h>
 #include <winrt/Microsoft.UI.Xaml.h>
@@ -36,6 +38,7 @@ using namespace Microsoft::UI::Xaml::Input;
 using namespace Microsoft::UI::Xaml::Media;
 
 constexpr UINT32 kWindowsAppSdkMajorMinor = 0x00020006;
+constexpr UINT kMenuBookmarkThis = 2006;
 
 using BootstrapInitializeFn = HRESULT (WINAPI*)(UINT32, PCWSTR, PACKAGE_VERSION);
 using BootstrapShutdownFn = void (WINAPI*)();
@@ -46,7 +49,7 @@ BootstrapShutdownFn g_bootstrapShutdown = nullptr;
 bool g_bootstrapInitialized = false;
 bool g_comInitialized = false;
 bool g_ownsDispatcher = false;
-DispatcherQueueController g_dispatcherController{ nullptr };
+Microsoft::UI::Dispatching::DispatcherQueueController g_dispatcherController{ nullptr };
 DesktopWindowXamlSource g_source{ nullptr };
 Grid g_root{ nullptr };
 TabView g_tabs{ nullptr };
@@ -256,7 +259,7 @@ void BuildChrome() {
   auto menuButton = MakeIconButton(L"\uE712", [] {});
   MenuFlyout menu;
   AddMenuItem(menu, L"New tab", ID_MENU_NEW_TAB);
-  AddMenuItem(menu, L"Bookmark this page", ID_MENU_BOOKMARK_THIS);
+  AddMenuItem(menu, L"Bookmark this page", kMenuBookmarkThis);
   AddMenuItem(menu, L"Downloads", 2007);
   AddMenuItem(menu, L"Settings", 2009);
   menu.Items().Append(MenuFlyoutSeparator{});
@@ -316,7 +319,7 @@ HRESULT WINAPI VeyraWinUiInitialize(HWND parent) {
     winrt::init_apartment(apartment_type::single_threaded);
     g_comInitialized = true;
 
-    g_dispatcherController = DispatcherQueueController::CreateOnCurrentThread();
+    g_dispatcherController = Microsoft::UI::Dispatching::DispatcherQueueController::CreateOnCurrentThread();
     g_ownsDispatcher = true;
 
     g_parent = parent;
@@ -369,9 +372,9 @@ void WINAPI VeyraWinUiSetTabs(const VEYRA_WINUI_TAB* tabs,
     TabViewItem selected{ nullptr };
     for (unsigned int i = 0; tabs && i < count; ++i) {
       TabViewItem item;
-      item.Header(tabs[i].title && *tabs[i].title
+      item.Header(box_value(tabs[i].title && *tabs[i].title
           ? hstring(tabs[i].title)
-          : hstring(L"New tab"));
+          : hstring(L"New tab")));
       item.Tag(box_value(tabs[i].id));
       item.IsClosable(count > 1);
       g_tabs.TabItems().Append(item);
