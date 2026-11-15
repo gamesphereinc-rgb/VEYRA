@@ -190,7 +190,7 @@ Write-Host "CEF minimal runtime ready: $CefRoot" -ForegroundColor Green
 
 # The WinUI 3 module is unpackaged and requires the matching Windows App SDK runtime.
 # Download the official x64 runtime installer and verify Microsoft's Authenticode signature.
-$WinAppRuntimeDirectory = Join-Path $ThirdParty "windows-app-runtime"
+$WinAppRuntimeDirectory = Join-Path $Root "third_party\windows-app-runtime"
 $WinAppRuntimeInstaller = Join-Path $WinAppRuntimeDirectory "WindowsAppRuntimeInstall-x64.exe"
 $WinAppRuntimeUrl = "https://aka.ms/windowsappsdk/2.6/2.6.4/windowsappruntimeinstall-x64.exe"
 New-Item -ItemType Directory -Force -Path $WinAppRuntimeDirectory | Out-Null
