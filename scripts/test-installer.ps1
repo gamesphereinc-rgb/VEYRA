@@ -57,6 +57,14 @@ try {
     if (-not (Test-Path -LiteralPath $installedIcon -PathType Leaf)) {
         throw "Setup completed but VEYRA.ico was not installed."
     }
+    $installedRuntimeInstaller = Join-Path $installDirectory "WindowsAppRuntimeInstall-x64.exe"
+    if (-not (Test-Path -LiteralPath $installedRuntimeInstaller -PathType Leaf)) {
+        throw "Setup completed but the Windows App SDK runtime installer was not installed."
+    }
+    $runtimePackages = @(Get-AppxPackage -Name "Microsoft.WindowsAppRuntime.2" -ErrorAction SilentlyContinue)
+    if ($runtimePackages.Count -eq 0) {
+        throw "The VEYRA setup did not deploy the required Windows App SDK runtime."
+    }
     $bootstrapHash = (Get-FileHash -LiteralPath $installedBootstrap -Algorithm SHA256).Hash
     $renamedHash = (Get-FileHash -LiteralPath $installedExe -Algorithm SHA256).Hash
     if ($bootstrapHash -ne $renamedHash) {
