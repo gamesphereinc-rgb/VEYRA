@@ -48,4 +48,5 @@ Name: "{autoprograms}\Uninstall VEYRA"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\VEYRA"; Filename: "{app}\VEYRA.exe"; WorkingDir: "{app}"; IconFilename: "{app}\VEYRA.ico"; Tasks: desktopicon
 
 [Run]
+Filename: "{app}\WindowsAppRuntimeInstall-x64.exe"; Parameters: "--quiet"; StatusMsg: "Installing the Microsoft Windows App SDK runtime..."; Flags: waituntilterminated
 Filename: "{app}\VEYRA.exe"; Description: "Launch VEYRA"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent
