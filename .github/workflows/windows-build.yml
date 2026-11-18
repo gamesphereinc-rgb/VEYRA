@@ -121,13 +121,13 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Download VEYRA build
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: VEYRA-windows-x64
           path: package
 
       - name: Download VEYRA installer
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: VEYRA-Setup-x64
           path: installer
@@ -159,12 +159,12 @@ jobs:
       - name: Check out release source
         uses: actions/checkout@v7
       - name: Download packaged VEYRA build
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: VEYRA-windows-x64
           path: VEYRA-windows-x64
       - name: Download VEYRA Windows installer
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: VEYRA-Setup-x64
           path: VEYRA-installer
