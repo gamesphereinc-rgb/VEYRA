@@ -68,7 +68,7 @@ jobs:
 
       - name: Restore verified minimal CEF cache
         id: cef-cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: third_party/cef/cef_binary_156.0.7+g47dbc1d+chromium-156.0.8078.17_windows64_beta_minimal
           key: cef-windows-x64-beta-minimal-156.0.7-g47dbc1d-chromium-156.0.8078.17
@@ -81,7 +81,7 @@ jobs:
       # Save immediately after CEF is ready, even if a later compile step fails.
       - name: Save verified minimal CEF cache
         if: steps.cef-setup.outcome == 'success' && steps.cef-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         with:
           path: third_party/cef/cef_binary_156.0.7+g47dbc1d+chromium-156.0.8078.17_windows64_beta_minimal
           key: cef-windows-x64-beta-minimal-156.0.7-g47dbc1d-chromium-156.0.8078.17
